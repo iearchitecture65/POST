@@ -3762,10 +3762,12 @@
                 msgsWithData.forEach((item) => {
                     const msg = item.msg;
                     const base64Img = item.base64;
+                    const isAnonymous = msg.from.isAnonymous;
+                    let displayName = isAnonymous ? 'ผู้ไม่ประสงค์ออกนาม' : msg.from.name;
                     const link = `${window.location.origin}${window.location.pathname}?m=${msg.id}`;
-
+                    
                     messagesHtml += `
-                        <div style="margin-bottom: 25px; text-align: center;">
+                        <div style="margin-bottom: 30px; text-align: center;">
                             ${base64Img ? `<img src="${base64Img}" alt="Message Preview" style="max-width: 100%; height: auto; border-radius: 16px; border: 3px solid #2b71b8; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">` : ''}
                             <div style="margin-top: 15px;">
                                 <a href="${link}" style="display: inline-block; background-color: #fddf31; color: #2b71b8; padding: 12px 25px; border-radius: 25px; text-decoration: none; font-weight: bold; font-size: 14px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">เปิดดู/ฟัง ในระบบส่งเสียง</a>
@@ -3805,6 +3807,15 @@
                     return glassSwal.fire('แจ้งเตือน', 'กรุณาเลือกอย่างน้อย 1 ข้อความเพื่อส่ง', 'warning');
                 }
 
+                // ==========================================
+                // นำ LINK จาก APPS SCRIPT อันใหม่มาวางตรงนี้
+                // ==========================================
+                const EMAIL_API_URL = "https://script.google.com/macros/s/AKfycbzBRPe1FMDF7oohTDeiHZaKeVzQj9yIISTqTggtoiZwU9oN83N8YF9QCLRxzb6krIfP/exec"; 
+
+                if (EMAIL_API_URL === "https://script.google.com/macros/s/AKfycbzBRPe1FMDF7oohTDeiHZaKeVzQj9yIISTqTggtoiZwU9oN83N8YF9QCLRxzb6krIfP/exec") {
+                    return glassSwal.fire('แจ้งเตือน', 'กรุณานำ Link App Script สำหรับส่งเมลมาใส่ในตัวแปร EMAIL_API_URL ก่อนครับ', 'info');
+                }
+
                 const user = predefinedUsers.find(u => u.studentId === uid);
                 if (!user) return;
 
@@ -3822,50 +3833,129 @@
                     for (const msgId of selectedMsgIds) {
                         const msg = this.allMessages.find(m => m.id === msgId);
                         if (msg) {
-                            // สั่งให้โหลดภาพ Base64
                             const base64 = await this.generateEmailCardImage(msg);
                             msgsWithData.push({ msg, base64 });
-                            // รีเฟรชอายุลิ้งก์ให้ใหม่
                             await this.refreshLinkExpiry(msgId);
                         }
                     }
 
                     const htmlBody = this.buildEmailTemplate(user, msgsWithData);
                     
-                    // ส่งข้อมูลไปยัง Google Apps Script
-                    await fetch(APPS_SCRIPT_URL, {
+                    const response = await fetch(EMAIL_API_URL, {
                         method: "POST",
-                        mode: "no-cors", // ใช้ no-cors ป้องกันปัญหา Cross-Origin
                         headers: {
-                            "Content-Type": "application/json"
+                            // ใช้ text/plain เลี่ยงปัญหา CORS Preflight ในระบบ Google Apps Script
+                            "Content-Type": "text/plain;charset=utf-8", 
                         },
                         body: JSON.stringify({
-                            action: "sendCustomEmail",
                             email: email,
                             subject: `คุณมี ${selectedMsgIds.length} ข้อความใหม่จากระบบ Song Siang 💌`,
                             htmlBody: htmlBody
                         })
                     });
 
-                    glassSwal.fire({
-                        iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl"></i>',
-                        title: 'ดำเนินการส่งสำเร็จ!',
-                        text: 'อีเมลกำลังถูกส่งไปยังปลายทาง',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
+                    const result = await response.json();
+
+                    if (result.status === 'success') {
+                        glassSwal.fire({
+                            iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl"></i>',
+                            title: 'ดำเนินการส่งสำเร็จ!',
+                            text: 'อีเมลกำลังถูกส่งไปยังปลายทาง',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        throw new Error(result.message || 'เกิดข้อผิดพลาดในการส่ง');
+                    }
 
                 } catch (e) {
                     console.error("Email send error", e);
-                    glassSwal.fire('ข้อผิดพลาด', 'อาจเกิดปัญหาขัดข้องทางเครือข่าย หรือขนาดรูปภาพใหญ่เกินไป', 'error');
+                    glassSwal.fire('ข้อผิดพลาด', 'เกิดปัญหาขัดข้องทางเครือข่าย หรือเซิร์ฟเวอร์ไม่ตอบสนอง: ' + e.message, 'error');
                 }
             },
 
             startBulkEmailProcess: async function() {
+                // หาผู้ใช้งานที่มีข้อความ
+                const usersWithMessages = predefinedUsers.map(user => {
+                    const userMsgs = this.allMessages.filter(m => m.to && Array.isArray(m.to) && (m.to.includes(user.studentId) || m.to.length >= predefinedUsers.length));
+                    return { ...user, msgCount: userMsgs.length, messages: userMsgs };
+                }).filter(u => u.msgCount > 0);
+
+                if (usersWithMessages.length === 0) {
+                    return glassSwal.fire('แจ้งเตือน', 'ไม่มีผู้ใช้ที่มีข้อความค้างอยู่', 'info');
+                }
+
                 glassSwal.fire({
-                    title: 'กำลังพัฒนา',
-                    text: 'ฟีเจอร์ "ส่งให้ทุกคนพร้อมกัน" กำลังอยู่ระหว่างการพัฒนา เพื่อป้องกันการส่งสแปมอีเมล (Spam Limit)',
-                    icon: 'info'
+                    title: 'ส่งอีเมลหาทุกคน?',
+                    html: `ระบบจะทยอยส่งอีเมลรวมข้อความให้สมาชิก <b>${usersWithMessages.length}</b> ท่าน<br><br><span class="text-xs text-red-500 font-bold">ห้ามปิดหน้านี้จนกว่าจะเสร็จสิ้น!</span>`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'เริ่มส่งทันที',
+                    cancelButtonText: 'ยกเลิก'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        
+                        const EMAIL_API_URL = "ใส่_LINK_APPS_SCRIPT_ใหม่_ที่นี่"; 
+                        if (EMAIL_API_URL === "ใส่_LINK_APPS_SCRIPT_ใหม่_ที่นี่") {
+                            return glassSwal.fire('แจ้งเตือน', 'กรุณานำ Link App Script สำหรับส่งเมลมาใส่ในตัวแปร EMAIL_API_URL ก่อนครับ', 'info');
+                        }
+
+                        let successCount = 0;
+                        let failCount = 0;
+
+                        glassSwal.fire({
+                            title: 'กำลังทยอยส่งอีเมล...',
+                            html: `<div class="text-center"><i class="fa-solid fa-spinner fa-spin text-4xl text-primary mb-3"></i><br>ส่งสำเร็จ: <span id="bulkSuccess" class="text-green-500 font-bold">0</span> | ล้มเหลว: <span id="bulkFail" class="text-red-500 font-bold">0</span><br><br><p class="text-xs text-gray-500">ระบบจะทำการดีเลย์เพื่อป้องกัน Spam Limit</p></div>`,
+                            showConfirmButton: false,
+                            allowOutsideClick: false
+                        });
+
+                        for (const user of usersWithMessages) {
+                            try {
+                                const msgsWithData = [];
+                                // เอาแค่ 3 ข้อความล่าสุดเพื่อไม่ให้ Payload ใหญ่เกินไปจน Request พัง
+                                const recentMsgs = user.messages.slice(0, 3);
+                                for (const msg of recentMsgs) {
+                                    const base64 = await this.generateEmailCardImage(msg);
+                                    msgsWithData.push({ msg, base64 });
+                                }
+
+                                const htmlBody = this.buildEmailTemplate(user, msgsWithData);
+                                const email = `${user.studentId}@kmitl.ac.th`;
+
+                                const response = await fetch(EMAIL_API_URL, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                                    body: JSON.stringify({
+                                        email: email,
+                                        subject: `คุณมีข้อความใหม่จากระบบ Song Siang 💌`,
+                                        htmlBody: htmlBody
+                                    })
+                                });
+
+                                const resJson = await response.json();
+                                if (resJson.status === 'success') {
+                                    successCount++;
+                                    document.getElementById('bulkSuccess').innerText = successCount;
+                                } else {
+                                    failCount++;
+                                    document.getElementById('bulkFail').innerText = failCount;
+                                }
+                            } catch (err) {
+                                failCount++;
+                                document.getElementById('bulkFail').innerText = failCount;
+                            }
+                            // ดีเลย์ 1.5 วิ ป้องกัน Google Apps Script Rate limit
+                            await new Promise(r => setTimeout(r, 1500));
+                        }
+
+                        glassSwal.fire({
+                            iconHtml: '<i class="fa-solid fa-flag-checkered text-primary text-5xl"></i>',
+                            title: 'ส่งอีเมลเสร็จสิ้น!',
+                            html: `สำเร็จ: <b class="text-green-500">${successCount}</b><br>ล้มเหลว: <b class="text-red-500">${failCount}</b>`,
+                            confirmButtonText: 'รับทราบ'
+                        });
+                    }
                 });
             }
         };
