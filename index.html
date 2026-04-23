@@ -2,162 +2,271 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canva Design Embed Simulator (Hide Controls)</title>
-    
-    <!-- Open Graph / Social Media Meta Tags (สำหรับแสดงพรีวิวใน LINE/Facebook) -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://www.canva.com/design/DAHHnGq5PKw/2u8QZQcCGImdNZb7huKGzA/view">
-    <meta property="og:title" content="Canva Design Portfolio Preview">
-    <meta property="og:description" content="ระบบจำลองการแสดงผลงานออกแบบจาก Canva แบบ Minimal (ซ่อนแถบควบคุม)">
-    <!-- รูปพรีวิว: ใช้ลิงก์ Thumbnail ของ Canva โดยตรงเพื่อให้เห็นภาพงาน -->
-    <meta property="og:image" content="https://www.canva.com/design/DAHHnGq5PKw/2u8QZQcCGImdNZb7huKGzA/thumbnail?size=1200">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PostCheck - ระบบตรวจสอบข้อมูลการโพสต์</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <style>
-        body {
-            font-family: 'Kanit', sans-serif;
-            background-color: #f3f4f6;
-        }
-        
-        /* Container หลักที่ควบคุมสัดส่วน */
-        .embed-wrapper {
-            position: relative;
-            width: 100%;
-            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
-            overflow: hidden;
-            border-radius: 12px;
-            background: #000;
-            transition: all 0.3s ease;
-        }
-
-        /* Iframe ของ Canva */
-        .embed-wrapper iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: 0;
-            transition: all 0.3s ease;
-        }
-
-        /* คลาสสำหรับซ่อนแถบควบคุม (Crop Mode) */
-        .embed-wrapper.hide-controls iframe {
-            height: 112%; /* ขยายให้แถบล่างตกขอบไป */
-            top: -2%;    /* ดันขึ้นเล็กน้อยเพื่อความสมดุล */
-        }
+        body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; touch-action: manipulation; }
+        .glass-bottom { background: linear-gradient(to top, rgba(248,250,252,1) 60%, rgba(248,250,252,0) 100%); }
+        .page-transition { animation: fadeInUp 0.3s ease-out forwards; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .scrollable-content { height: calc(100vh - 70px); overflow-y: auto; padding-bottom: 100px; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen flex flex-col">
+<body class="text-slate-900">
 
-    <!-- Header -->
-    <header class="bg-white border-b border-slate-200 py-6">
-        <div class="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-3">
-                <div class="bg-indigo-600 p-2 rounded-lg text-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-                </div>
-                <div>
-                    <h1 class="text-xl font-semibold text-slate-800">Canva Custom Viewer</h1>
-                    <p class="text-sm text-slate-500">โหมดจำลองการแสดงผลพร้อมพรีวิวโซเชียล</p>
-                </div>
-            </div>
-
-            <!-- Toggle Switch สำหรับเปิด/ปิดแถบควบคุม -->
-            <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
-                <button id="showBtn" onclick="setControlMode(false)" class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-white shadow-sm text-indigo-600">
-                    แสดงแถบควบคุม
-                </button>
-                <button id="hideBtn" onclick="setControlMode(true)" class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-slate-500 hover:text-slate-700">
-                    ซ่อนแถบควบคุม
-                </button>
-            </div>
+    <div id="app">
+        <div class="flex flex-col items-center justify-center h-screen text-indigo-600 gap-4">
+            <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-indigo-600"></div>
+            <p class="font-bold text-xs tracking-widest uppercase animate-pulse">กำลังโหลดระบบ...</p>
         </div>
-    </header>
+    </div>
 
-    <main class="flex-grow max-w-6xl mx-auto w-full px-4 py-8">
+    <div id="modal-container"></div>
+    <div id="preview-modal-container"></div>
+    <div id="offscreenRenderer" style="position: fixed; top: 0; left: -3000vw; z-index: -9999; opacity: 0;"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD1z-AufMcsNqnbm3uUjoniuhdmDksYHMY",
+            authDomain: "moranasatect.firebaseapp.com",
+            projectId: "moranasatect",
+            storageBucket: "moranasatect.firebasestorage.app",
+            messagingSenderId: "592676930184",
+            appId: "1:592676930184:web:a142d92aace735cff5153d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'post-check-v1';
         
-        <!-- Status Indicator -->
-        <div class="flex items-center gap-2 mb-6 bg-indigo-50 border border-indigo-100 w-fit px-4 py-2 rounded-full">
-            <div id="statusDot" class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
-            <span id="statusText" class="text-xs font-semibold text-indigo-700 uppercase tracking-wider">กำลังแสดงผลปกติ</span>
-        </div>
+        // URL ดึงข้อมูล CSV จาก Sheets ที่ระบุ
+        const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTRyI-a9eEarynPfuWWbpTqHvz-vDHBGnE1UnvqvDOGIAA9nWybOkfS2jlI3xJRrpFAuR5nmWup9169/pub?gid=1236460372&single=true&output=csv";
 
-        <!-- Embed Area -->
-        <div class="bg-white p-2 md:p-4 rounded-2xl shadow-2xl border border-slate-200 relative">
-            <div id="embedContainer" class="embed-wrapper">
-                <iframe 
-                    id="canvaFrame"
-                    loading="lazy" 
-                    src="https://www.canva.com/design/DAHHnGq5PKw/2u8QZQcCGImdNZb7huKGzA/view?embed" 
-                    allowfullscreen="allowfullscreen" 
-                    allow="fullscreen">
-                </iframe>
-            </div>
-        </div>
+        window.state = {
+            view: 'login',
+            studentId: '',
+            isAdmin: false,
+            sheetData: [],
+            confirmations: {},
+            copiedStates: { ig: false, fb: false },
+            isLoading: true
+        };
 
-        <!-- Info Panels -->
-        <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-500"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-                    Social Preview Updated
-                </h3>
-                <p class="text-slate-600 text-sm leading-relaxed">
-                    เพิ่ม <code class="text-indigo-600 font-mono">og:image</code> เรียบร้อยแล้ว เมื่อนำ URL ของเว็บนี้ไปวางใน LINE หรือแอปโซเชียล จะปรากฏภาพตัวอย่างงานออกแบบของคุณทันที
-                </p>
-            </div>
-            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-500"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                    หมายเหตุการใช้งาน
-                </h3>
-                <p class="text-slate-600 text-sm leading-relaxed">
-                    เพื่อให้การแสดงผลพรีวิวทำงานได้ คุณต้องนำโค้ดนี้ไปอัปโหลดขึ้นเว็บโฮสติ้งจริง (เช่น GitHub Pages, Netlify หรือ Vercel) เพื่อให้บอทของระบบโซเชียลเข้ามาเก็บข้อมูลได้
-                </p>
-            </div>
-        </div>
-    </main>
+        // ฟังก์ชันคัดลอกข้อความ
+        window.copyText = (text, type) => {
+            navigator.clipboard.writeText(text).then(() => {
+                window.state.copiedStates[type] = true;
+                window.uiAlert("คัดลอกข้อความแล้ว! ตอนนี้คุณสามารถกดยืนยันการโพสต์ได้", "success");
+                render();
+            });
+        };
 
-    <footer class="py-6 text-center text-slate-400 text-xs">
-        <p>© 2024 Canva Embed Simulator • Enhanced for LINE Preview</p>
-    </footer>
-
-    <script>
-        /**
-         * ฟังก์ชันสำหรับสลับโหมดการแสดงผล (แสดง/ซ่อน แถบควบคุม)
-         */
-        function setControlMode(isHide) {
-            const container = document.getElementById('embedContainer');
-            const showBtn = document.getElementById('showBtn');
-            const hideBtn = document.getElementById('hideBtn');
-            const statusText = document.getElementById('statusText');
-            const statusDot = document.getElementById('statusDot');
-
-            if (isHide) {
-                // เปิดโหมดซ่อนแถบควบคุม
-                container.classList.add('hide-controls');
-                hideBtn.classList.add('bg-white', 'shadow-sm', 'text-indigo-600');
-                hideBtn.classList.remove('text-slate-500');
-                showBtn.classList.remove('bg-white', 'shadow-sm', 'text-indigo-600');
-                showBtn.classList.add('text-slate-500');
-                statusText.innerText = "โหมดซ่อนแถบควบคุม (Clean)";
-                statusDot.classList.replace('bg-indigo-500', 'bg-emerald-500');
-            } else {
-                // กลับสู่โหมดแสดงผลปกติ
-                container.classList.remove('hide-controls');
-                showBtn.classList.add('bg-white', 'shadow-sm', 'text-indigo-600');
-                showBtn.classList.remove('text-slate-500');
-                hideBtn.classList.remove('bg-white', 'shadow-sm', 'text-indigo-600');
-                hideBtn.classList.add('text-slate-500');
-                statusText.innerText = "กำลังแสดงผลปกติ";
-                statusDot.classList.replace('bg-emerald-500', 'bg-indigo-500');
-            }
+        async function fetchSheetData() {
+            try {
+                const response = await fetch(SHEET_URL + "&t=" + Date.now());
+                const csvText = await response.text();
+                const rows = csvText.split('\n').map(r => r.split(','));
+                
+                // Mapping: 1.1 ลำดับ, 1.2 ข้อมูล, 1.3 เช็คลิส (และชุด 2.x สำหรับ FB)
+                window.state.sheetData = rows.slice(1).map(r => ({
+                    ig_id: r[0], ig_content: r[1], ig_check: r[2],
+                    fb_id: r[3], fb_content: r[4], fb_check: r[5]
+                })).filter(r => r.ig_id || r.fb_id);
+                
+                render();
+            } catch (e) { console.error("Fetch error", e); }
         }
+
+        window.handleLogin = (e) => {
+            e.preventDefault();
+            const id = document.getElementById('login_id').value.trim();
+            if (id === "65030900") {
+                window.state.isAdmin = true;
+                window.state.view = 'admin';
+            } else if (id === "12345678") {
+                window.state.isAdmin = false;
+                window.state.view = 'student';
+            } else {
+                return window.uiAlert("รหัสไม่ถูกต้อง", "error");
+            }
+            window.state.studentId = id;
+            render();
+        };
+
+        window.toggleCheck = async (type) => {
+            if (!window.state.copiedStates[type]) {
+                return window.uiAlert("กรุณากด 'คัดลอกเนื้อหา' ก่อนทำการยืนยันการโพสต์", "info");
+            }
+            const sid = window.state.studentId;
+            const current = window.state.confirmations[sid] || {};
+            const updated = { ...current, [type]: !current[type] };
+            
+            window.state.confirmations[sid] = updated;
+            await setDoc(doc(db, 'artifacts', appId, 'data', 'status'), window.state.confirmations, { merge: true });
+            render();
+        };
+
+        window.logout = () => {
+            window.state.view = 'login';
+            window.state.studentId = '';
+            window.state.copiedStates = { ig: false, fb: false };
+            render();
+        };
+
+        // --- Render UI ---
+        function renderLogin() {
+            return `
+                <div class="h-screen flex items-center justify-center p-6 bg-slate-100">
+                    <div class="bg-white p-8 rounded-[2rem] shadow-xl w-full max-w-sm text-center page-transition">
+                        <div class="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg">
+                            <i data-lucide="send" size="40"></i>
+                        </div>
+                        <h1 class="text-2xl font-black text-slate-800">PostCheck</h1>
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1 mb-8">Social Media Content System</p>
+                        <form onsubmit="window.handleLogin(event)" class="space-y-4 text-left">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase ml-2">รหัสผ่านเข้าใช้งาน</label>
+                            <input id="login_id" type="password" placeholder="••••••••" class="w-full p-4 rounded-2xl bg-slate-50 border-2 border-slate-100 font-bold text-center text-lg focus:border-indigo-500 outline-none transition-all" required>
+                            <button type="submit" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 transition-all uppercase tracking-widest text-sm">เข้าสู่ระบบ</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderStudentView() {
+            const data = window.state.sheetData[0] || {}; // สมมติให้แสดงแถวแรกที่ดึงมา
+            const conf = window.state.confirmations[window.state.studentId] || {};
+
+            return `
+                <header class="bg-white p-4 border-b flex justify-between items-center sticky top-0 z-50">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white"><i data-lucide="layout" size="16"></i></div>
+                        <span class="font-black text-sm uppercase">Post Data</span>
+                    </div>
+                    <button onclick="window.logout()" class="text-slate-400"><i data-lucide="log-out" size="20"></i></button>
+                </header>
+                <div class="p-4 space-y-4 max-w-lg mx-auto scrollable-content">
+                    ${renderPostCard('Instagram (IG)', 'ig', data.ig_id, data.ig_content, conf.ig)}
+                    ${renderPostCard('Facebook (FB)', 'fb', data.fb_id, data.fb_content, conf.fb)}
+                </div>
+            `;
+        }
+
+        function renderPostCard(title, type, id, content, isDone) {
+            const hasCopied = window.state.copiedStates[type];
+            return `
+                <div class="bg-white p-5 rounded-3xl border-2 ${isDone ? 'border-green-500 bg-green-50' : 'border-slate-100'} shadow-sm page-transition">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase">ลำดับ: ${id || '-'}</span>
+                        <h3 class="font-black text-slate-800">${title}</h3>
+                    </div>
+                    <div class="bg-white border border-slate-200 p-4 rounded-2xl mb-4 relative">
+                        <p class="text-sm text-slate-600 leading-relaxed">${content || 'ไม่มีข้อมูล'}</p>
+                        <button onclick="window.copyText('${content?.replace(/'/g, "\\'")}', '${type}')" class="mt-3 w-full py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-indigo-100 transition-all">
+                            <i data-lucide="copy" size="14"></i> คัดลอกเนื้อหา
+                        </button>
+                    </div>
+                    <button onclick="window.toggleCheck('${type}')" class="w-full py-4 ${isDone ? 'bg-green-500 shadow-green-200' : hasCopied ? 'bg-slate-900 shadow-slate-200' : 'bg-slate-200 cursor-not-allowed'} text-white rounded-2xl font-bold shadow-lg transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="${isDone ? 'check-circle' : 'send'}" size="18"></i>
+                        ${isDone ? 'โพสต์เรียบร้อยแล้ว' : 'ยืนยันการโพสต์'}
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderAdminView() {
+            const students = Object.keys(window.state.confirmations);
+            return `
+                <header class="bg-white p-4 border-b flex justify-between items-center sticky top-0 z-50">
+                    <h1 class="font-black uppercase text-sm">Admin Dashboard</h1>
+                    <div class="flex gap-2">
+                        <button onclick="window.exportToImage()" class="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><i data-lucide="image" size="18"></i></button>
+                        <button onclick="window.logout()" class="p-2 text-slate-400"><i data-lucide="log-out" size="18"></i></button>
+                    </div>
+                </header>
+                <div class="p-4 max-w-2xl mx-auto space-y-4">
+                    <div class="bg-indigo-600 p-6 rounded-[2rem] text-white shadow-xl">
+                        <p class="text-xs font-bold opacity-70 uppercase tracking-widest">ผู้ใช้งานที่ทำรายการแล้ว</p>
+                        <h2 class="text-4xl font-black mt-1">${students.length} <span class="text-lg font-normal">คน</span></h2>
+                    </div>
+                    <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm" id="admin-report">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 border-b border-slate-100">
+                                <tr class="text-[10px] font-black text-slate-400 uppercase">
+                                    <th class="p-4">User ID</th>
+                                    <th class="p-4 text-center">IG Status</th>
+                                    <th class="p-4 text-center">FB Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-50">
+                                ${students.map(sid => {
+                                    const c = window.state.confirmations[sid];
+                                    return `
+                                        <tr>
+                                            <td class="p-4 font-bold text-slate-700">${sid}</td>
+                                            <td class="p-4 text-center">${c.ig ? '✅' : '❌'}</td>
+                                            <td class="p-4 text-center">${c.fb ? '✅' : '❌'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Utility Functions ---
+        window.uiAlert = (message, type = 'info') => {
+            const colors = type === 'error' ? 'bg-red-500' : type === 'success' ? 'bg-green-500' : 'bg-indigo-600';
+            const container = document.getElementById('modal-container');
+            container.innerHTML = `
+                <div class="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] ${colors} text-white px-6 py-3 rounded-2xl font-bold shadow-2xl page-transition text-sm">
+                    ${message}
+                </div>
+            `;
+            setTimeout(() => container.innerHTML = '', 3000);
+        };
+
+        window.exportToImage = () => {
+            const el = document.getElementById('admin-report');
+            htmlToImage.toPng(el).then(dataUrl => {
+                const link = document.createElement('a');
+                link.download = 'PostCheck_Report.png';
+                link.href = dataUrl;
+                link.click();
+            });
+        };
+
+        function render() {
+            const root = document.getElementById('app');
+            if (window.state.view === 'login') root.innerHTML = renderLogin();
+            else if (window.state.view === 'student') root.innerHTML = renderStudentView();
+            else if (window.state.view === 'admin') root.innerHTML = renderAdminView();
+            lucide.createIcons();
+        }
+
+        // Initialized Data
+        onAuthStateChanged(auth, (u) => {
+            if (u) {
+                onSnapshot(doc(db, 'artifacts', appId, 'data', 'status'), (s) => {
+                    if (s.exists()) window.state.confirmations = s.data();
+                    fetchSheetData();
+                });
+            } else { signInAnonymously(auth); }
+        });
     </script>
 </body>
 </html>
