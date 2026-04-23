@@ -3,41 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PostCheck - ระบบตรวจสอบข้อมูลการโพสต์</title>
+    <title>PostManager - ระบบจัดการข้อมูลโพสต์</title>
+    <!-- Web Icon / Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%234f46e5%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z%22></path><polyline points=%2214 2 14 8 20 8%22></polyline><line x1=%2216%22 y1=%2213%22 x2=%228%22 y2=%2213%22></line><line x1=%2216%22 y1=%2217%22 x2=%228%22 y2=%2217%22></line><polyline points=%2210 9 9 9 8 9%22></polyline></svg>" type="image/svg+xml">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous">
+    
+    <!-- Export Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ig: '#E1306C',
+                        fb: '#1877F2'
+                    },
+                    fontFamily: { sans: ['Inter', 'Prompt', 'sans-serif'] },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.4s ease-out forwards',
+                        'bounce-slow': 'bounce 2s infinite',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(15px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; touch-action: manipulation; }
-        .glass-bottom { background: linear-gradient(to top, rgba(248,250,252,1) 60%, rgba(248,250,252,0) 100%); }
+        body { 
+            font-family: 'Prompt', sans-serif; 
+            overflow: hidden; 
+            height: 100vh; 
+            height: 100dvh; 
+            background-color: #f8fafc; 
+            margin: 0; 
+            padding: 0; 
+            touch-action: manipulation; 
+        }
+        #app { 
+            height: 100vh; 
+            height: 100dvh; 
+            display: flex; 
+            flex-direction: column; 
+            position: relative; 
+            background-color: #f8fafc;
+        }
+        .scrollable-content {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: calc(80px + env(safe-area-inset-bottom)); 
+            scroll-behavior: smooth;
+        }
+        .safe-pt { padding-top: env(safe-area-inset-top); }
+        .safe-pb { padding-bottom: env(safe-area-inset-bottom); }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
         .page-transition { animation: fadeInUp 0.3s ease-out forwards; }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-        .scrollable-content { height: calc(100vh - 70px); overflow-y: auto; padding-bottom: 100px; }
+        
+        .glass-bottom {
+            background: linear-gradient(to top, rgba(248,250,252,1) 60%, rgba(248,250,252,0) 100%);
+        }
+
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        input, select, textarea {
+            font-size: 14px !important;
+        }
+
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+        }
     </style>
 </head>
 <body class="text-slate-900">
 
     <div id="app">
-        <div class="flex flex-col items-center justify-center h-screen text-indigo-600 gap-4">
-            <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-indigo-600"></div>
+        <div class="flex flex-col items-center justify-center h-full text-indigo-600 gap-4">
+            <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-indigo-600 border-opacity-30"></div>
             <p class="font-bold text-xs tracking-widest uppercase animate-pulse">กำลังโหลดระบบ...</p>
         </div>
     </div>
-
+    
     <div id="modal-container"></div>
+    <div id="item-modal-container"></div>
     <div id="preview-modal-container"></div>
-    <div id="offscreenRenderer" style="position: fixed; top: 0; left: -3000vw; z-index: -9999; opacity: 0;"></div>
+    <div id="user-manage-modal-container"></div>
+    <div id="logs-modal-container"></div>
+
+    <div id="offscreenRenderer" style="position: fixed; top: 0; left: -3000vw; z-index: -9999; pointer-events: none; opacity: 0;"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, onSnapshot, setDoc, getDoc, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = {
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) e.preventDefault();
+        }, { passive: false });
+        
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) e.preventDefault();
+            lastTouchEnd = now;
+        }, false);
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
             apiKey: "AIzaSyD1z-AufMcsNqnbm3uUjoniuhdmDksYHMY",
             authDomain: "moranasatect.firebaseapp.com",
             projectId: "moranasatect",
@@ -49,224 +144,1543 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = 'post-check-v1';
-        
-        // URL ดึงข้อมูล CSV จาก Sheets ที่ระบุ
-        const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTRyI-a9eEarynPfuWWbpTqHvz-vDHBGnE1UnvqvDOGIAA9nWybOkfS2jlI3xJRrpFAuR5nmWup9169/pub?gid=1236460372&single=true&output=csv";
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'post-manager-v3';
+
+        const DEFAULT_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTRyI-a9eEarynPfuWWbpTqHvz-vDHBGnE1UnvqvDOGIAA9nWybOkfS2jlI3xJRrpFAuR5nmWup9169/pub?gid=1236460372&single=true&output=csv";
 
         window.state = {
-            view: 'login',
-            studentId: '',
-            isAdmin: false,
-            sheetData: [],
-            confirmations: {},
-            copiedStates: { ig: false, fb: false },
-            isLoading: true
+            view: 'login', 
+            user: null, 
+            
+            currentUser: {
+                passcode: '',
+                name: '',
+                role: 'user_b', // admin, user_a, user_b
+                access: 'both' 
+            },
+            
+            igData: [], 
+            fbData: [], 
+            
+            usersDB: {}, 
+            confirmations: {}, 
+            actionLogs: [], 
+            settings: { sessionTimeoutMinutes: 0 },
+            sessionLoginTime: null,
+            
+            currentTab: 'ig', 
+            searchQuery: '',
+            searchResultKeys: [], 
+            searchTargetSeq: '', 
+            filterExtra: '', // เก็บค่า Filter 1.3/2.3
+            copiedItems: {}, 
+            activeModalItem: null,
+            adminTab: 'overview', 
+            
+            isLoading: true,
+            modal: { show: false, title: '', message: '', type: 'info', onConfirm: null },
+            showPreviewModal: false,
+            showUserManageModal: false,
+            showLogsModal: false,
+            editingUser: null, 
+            
+            exportOrientation: 'portrait'
         };
 
-        // ฟังก์ชันคัดลอกข้อความ
-        window.copyText = (text, type) => {
-            navigator.clipboard.writeText(text).then(() => {
-                window.state.copiedStates[type] = true;
-                window.uiAlert("คัดลอกข้อความแล้ว! ตอนนี้คุณสามารถกดยืนยันการโพสต์ได้", "success");
-                render();
-            });
-        };
+        window.cachedExportDataURLs = []; 
+        window.currentExportGenId = 0;
+
+        function parseCSV(str) {
+            const arr = [];
+            let quote = false;
+            let row = 0, col = 0;
+            for (let c = 0; c < str.length; c++) {
+                let cc = str[c], nc = str[c+1];
+                arr[row] = arr[row] || [];
+                arr[row][col] = arr[row][col] || '';
+                if (cc == '"' && quote && nc == '"') { arr[row][col] += cc; ++c; continue; }
+                if (cc == '"') { quote = !quote; continue; }
+                if (cc == ',' && !quote) { ++col; continue; }
+                if (cc == '\r' && nc == '\n' && !quote) { ++row; col = 0; ++c; continue; }
+                if (cc == '\n' && !quote) { ++row; col = 0; continue; }
+                if (cc == '\r' && !quote) { ++row; col = 0; continue; }
+                arr[row][col] += cc;
+            }
+            return arr;
+        }
 
         async function fetchSheetData() {
             try {
-                const response = await fetch(SHEET_URL + "&t=" + Date.now());
+                const fetchUrl = DEFAULT_SHEET_URL + "&t=" + new Date().getTime();
+                const response = await fetch(fetchUrl);
+                if (!response.ok) throw new Error("HTTP Status " + response.status);
                 const csvText = await response.text();
-                const rows = csvText.split('\n').map(r => r.split(','));
+                const parsed = parseCSV(csvText);
                 
-                // Mapping: 1.1 ลำดับ, 1.2 ข้อมูล, 1.3 เช็คลิส (และชุด 2.x สำหรับ FB)
-                window.state.sheetData = rows.slice(1).map(r => ({
-                    ig_id: r[0], ig_content: r[1], ig_check: r[2],
-                    fb_id: r[3], fb_content: r[4], fb_check: r[5]
-                })).filter(r => r.ig_id || r.fb_id);
-                
-                render();
-            } catch (e) { console.error("Fetch error", e); }
+                if (parsed.length > 0) {
+                    const headers = parsed[0];
+                    let igSeqIdx = -1, igDataIdx = -1, igExtraIdx = -1;
+                    let fbSeqIdx = -1, fbDataIdx = -1, fbExtraIdx = -1;
+
+                    headers.forEach((h, i) => {
+                        if (h.includes('1.1')) igSeqIdx = i;
+                        if (h.includes('1.2')) igDataIdx = i;
+                        if (h.includes('1.3')) igExtraIdx = i;
+                        if (h.includes('2.1')) fbSeqIdx = i;
+                        if (h.includes('2.2')) fbDataIdx = i;
+                        if (h.includes('2.3')) fbExtraIdx = i;
+                    });
+
+                    const igList = [];
+                    const fbList = [];
+                    
+                    for (let i = 1; i < parsed.length; i++) {
+                        const row = parsed[i];
+                        if (igSeqIdx !== -1 && igDataIdx !== -1 && row[igSeqIdx]?.trim()) {
+                            igList.push({ 
+                                seq: row[igSeqIdx].trim(), 
+                                data: row[igDataIdx].trim(),
+                                extra: igExtraIdx !== -1 ? row[igExtraIdx]?.trim() || '' : ''
+                            });
+                        }
+                        if (fbSeqIdx !== -1 && fbDataIdx !== -1 && row[fbSeqIdx]?.trim()) {
+                            fbList.push({ 
+                                seq: row[fbSeqIdx].trim(), 
+                                data: row[fbDataIdx].trim(),
+                                extra: fbExtraIdx !== -1 ? row[fbExtraIdx]?.trim() || '' : ''
+                            });
+                        }
+                    }
+
+                    igList.sort((a,b) => parseFloat(a.seq) - parseFloat(b.seq));
+                    fbList.sort((a,b) => parseFloat(a.seq) - parseFloat(b.seq));
+
+                    window.state.igData = igList;
+                    window.state.fbData = fbList;
+
+                    if (!window.state.isLoading) render();
+                }
+            } catch (error) {
+                console.error("Error fetching sheet:", error);
+            }
         }
 
-        window.handleLogin = (e) => {
-            e.preventDefault();
-            const id = document.getElementById('login_id').value.trim();
-            if (id === "65030900") {
-                window.state.isAdmin = true;
-                window.state.view = 'admin';
-            } else if (id === "12345678") {
-                window.state.isAdmin = false;
-                window.state.view = 'student';
-            } else {
-                return window.uiAlert("รหัสไม่ถูกต้อง", "error");
-            }
-            window.state.studentId = id;
-            render();
-        };
+        async function seedInitialUsersIfEmpty() {
+            if (!window.state.user) return;
+            try {
+                const usersRef = doc(db, 'artifacts', appId, 'public', 'data', 'system', 'users_config');
+                const docSnap = await getDoc(usersRef);
+                
+                if (!docSnap.exists() || Object.keys(docSnap.data() || {}).length === 0) {
+                    const defaultUsers = {
+                        "65030900": { passcode: "65030900", role: "admin", access: "both", isBlocked: false, name: "แอดมินหลัก" },
+                        "12345678": { passcode: "12345678", role: "user_a", access: "both", isBlocked: false, name: "User A" },
+                        "11111111": { passcode: "11111111", role: "user_b", access: "both", isBlocked: false, name: "User B" }
+                    };
+                    await setDoc(usersRef, defaultUsers);
+                }
+            } catch(e) { console.error("Seed error:", e); }
+        }
 
-        window.toggleCheck = async (type) => {
-            if (!window.state.copiedStates[type]) {
-                return window.uiAlert("กรุณากด 'คัดลอกเนื้อหา' ก่อนทำการยืนยันการโพสต์", "info");
+        async function logAction(action, details) {
+            if (!window.state.user) return;
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'action_logs'), {
+                    action: action,
+                    details: details,
+                    name: window.state.currentUser.name || window.state.currentUser.passcode,
+                    role: window.state.currentUser.role,
+                    timestamp: Date.now()
+                });
+            } catch (e) { console.error("Log error:", e); }
+        }
+
+        async function init() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, async (u) => {
+                    window.state.user = u;
+                    if (u) {
+                        await seedInitialUsersIfEmpty();
+                        listenToData();
+                        await fetchSheetData();
+                        
+                        const settingsSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'settings'));
+                        if (settingsSnap.exists()) window.state.settings = settingsSnap.data();
+                        else window.state.settings = { sessionTimeoutMinutes: 0 };
+
+                        const sessionSnap = await getDoc(doc(db, 'artifacts', appId, 'users', u.uid, 'session', 'active'));
+                        if (sessionSnap.exists()) {
+                            const sessionData = sessionSnap.data();
+                            const timeout = window.state.settings.sessionTimeoutMinutes * 60 * 1000;
+                            const elapsed = Date.now() - sessionData.loginAt;
+
+                            if (timeout === 0 || elapsed < timeout) {
+                                const userRec = window.state.usersDB[sessionData.passcode];
+                                if (userRec && !userRec.isBlocked) {
+                                    window.state.currentUser = userRec;
+                                    window.state.sessionLoginTime = sessionData.loginAt;
+                                    
+                                    if (sessionData.passcode === "65030900") window.state.currentUser.role = "admin";
+
+                                    if (window.state.currentUser.role === 'admin') {
+                                        window.state.view = 'admin';
+                                        window.state.adminTab = 'overview';
+                                    } else {
+                                        window.state.view = 'user';
+                                        window.state.currentTab = (userRec.access === 'fb') ? 'fb' : 'ig';
+                                    }
+                                } else if (sessionData.passcode === "65030900") {
+                                    window.state.currentUser = { passcode: "65030900", role: "admin", access: "both", name: "แอดมินหลัก" };
+                                    window.state.sessionLoginTime = sessionData.loginAt;
+                                    window.state.view = 'admin';
+                                    window.state.adminTab = 'overview';
+                                } else {
+                                    await deleteDoc(doc(db, 'artifacts', appId, 'users', u.uid, 'session', 'active')).catch(()=>{});
+                                }
+                            } else {
+                                await deleteDoc(doc(db, 'artifacts', appId, 'users', u.uid, 'session', 'active')).catch(()=>{});
+                            }
+                        }
+                        
+                        window.state.isLoading = false; 
+                        render(); 
+                    } else {
+                        window.state.isLoading = false;
+                        render();
+                    }
+                });
+            } catch (err) { 
+                console.error("Firebase Auth Error:", err);
+                window.state.isLoading = false;
+                render();
             }
-            const sid = window.state.studentId;
-            const current = window.state.confirmations[sid] || {};
-            const updated = { ...current, [type]: !current[type] };
+        }
+
+        setInterval(() => {
+            if (window.state.view !== 'login' && window.state.settings) {
+                const timeout = window.state.settings.sessionTimeoutMinutes * 60 * 1000;
+                if (timeout > 0 && window.state.sessionLoginTime) {
+                    const elapsed = Date.now() - window.state.sessionLoginTime;
+                    if (elapsed > timeout) {
+                        window.uiAlert('เวลาใช้งาน (Session) หมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่', 'error');
+                        window.logout();
+                    }
+                }
+            }
+        }, 60000);
+
+        function listenToData() {
+            if (!window.state.user) return;
             
-            window.state.confirmations[sid] = updated;
-            await setDoc(doc(db, 'artifacts', appId, 'data', 'status'), window.state.confirmations, { merge: true });
-            render();
+            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'users_config'), (s) => {
+                if (s.exists()) window.state.usersDB = s.data();
+                else window.state.usersDB = {};
+                if(!window.state.isLoading) render();
+            });
+
+            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'post_status'), (s) => {
+                if (s.exists()) window.state.confirmations = s.data();
+                else setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'post_status'), {});
+                if(!window.state.isLoading) render();
+            });
+
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'action_logs'), (s) => {
+                window.state.actionLogs = s.docs.map(d => ({id: d.id, ...d.data()}));
+                if(!window.state.isLoading && window.state.view === 'admin') render();
+            });
+
+            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'settings'), (s) => {
+                if (s.exists()) window.state.settings = s.data();
+                else window.state.settings = { sessionTimeoutMinutes: 0 };
+                if(!window.state.isLoading && window.state.view === 'admin') render();
+            });
+        }
+
+        window.handleLogin = async (e) => {
+            if (e) e.preventDefault();
+            const passcode = document.getElementById('login_pwd').value.trim();
+            const userRec = window.state.usersDB[passcode];
+            
+            if (passcode === "65030900" && (!userRec || userRec.isBlocked === false)) {
+                window.state.currentUser = userRec || { passcode: "65030900", role: "admin", access: "both", name: "แอดมินหลัก" };
+                window.state.currentUser.role = "admin"; 
+                window.state.view = 'admin';
+                window.state.adminTab = 'overview';
+                window.state.sessionLoginTime = Date.now();
+                
+                await setDoc(doc(db, 'artifacts', appId, 'users', window.state.user.uid, 'session', 'active'), {
+                    passcode: passcode,
+                    loginAt: window.state.sessionLoginTime
+                });
+
+                await logAction('LOGIN', 'เข้าสู่ระบบแอดมินหลัก');
+                render();
+                return;
+            }
+
+            if (userRec) {
+                if (userRec.isBlocked) return window.uiAlert("บัญชีนี้ถูกระงับการใช้งาน โปรดติดต่อแอดมิน", "error");
+                if (userRec.passcode === "65030900") userRec.role = "admin"; 
+                
+                window.state.currentUser = userRec;
+                window.state.sessionLoginTime = Date.now();
+
+                await setDoc(doc(db, 'artifacts', appId, 'users', window.state.user.uid, 'session', 'active'), {
+                    passcode: passcode,
+                    loginAt: window.state.sessionLoginTime
+                });
+                
+                if (userRec.role === 'admin') {
+                    window.state.view = 'admin';
+                    window.state.adminTab = 'overview';
+                } else {
+                    window.state.view = 'user';
+                    window.state.currentTab = (userRec.access === 'fb') ? 'fb' : 'ig';
+                    window.state.searchQuery = '';
+                    window.state.searchResultKeys = [];
+                    window.state.filterExtra = '';
+                }
+                
+                await logAction('LOGIN', `เข้าสู่ระบบสำเร็จ`);
+                render();
+            } else {
+                window.uiAlert("รหัสเข้าใช้งานไม่ถูกต้อง", "error");
+            }
         };
 
-        window.logout = () => {
+        window.logout = async () => {
+            if (window.state.user) {
+                try { await deleteDoc(doc(db, 'artifacts', appId, 'users', window.state.user.uid, 'session', 'active')); } catch(e) {}
+            }
+            logAction('LOGOUT', 'ออกจากระบบ');
             window.state.view = 'login';
-            window.state.studentId = '';
-            window.state.copiedStates = { ig: false, fb: false };
+            window.state.currentUser = { passcode: '', role: 'user_b', access: 'both', name: '' };
+            window.state.sessionLoginTime = null;
+            window.state.activeModalItem = null;
             render();
         };
 
-        // --- Render UI ---
+        window.setTab = (tab) => {
+            window.state.currentTab = tab;
+            window.state.searchQuery = '';
+            window.state.searchResultKeys = [];
+            window.state.searchTargetSeq = '';
+            window.state.filterExtra = '';
+            render();
+        };
+
+        window.setAdminTab = (tab) => {
+            window.state.adminTab = tab;
+            render();
+        };
+
+        window.setFilterExtra = (val) => {
+            window.state.filterExtra = val;
+            window.state.searchQuery = '';
+            window.state.searchResultKeys = [];
+            window.state.searchTargetSeq = '';
+            render();
+        };
+
+        window.handleSearch = (e) => {
+            e.preventDefault();
+            const query = document.getElementById('search_input').value.trim();
+            window.state.searchQuery = query;
+            
+            const dataList = window.state.currentTab === 'ig' ? window.state.igData : window.state.fbData;
+            
+            if (!query) {
+                window.state.searchResultKeys = [];
+                window.state.searchTargetSeq = '';
+                render();
+                return;
+            }
+
+            const targetIndex = dataList.findIndex(item => item.seq === query);
+            
+            if (targetIndex !== -1) {
+                window.state.searchTargetSeq = query;
+                window.state.searchResultKeys = [];
+                
+                const start = Math.max(0, targetIndex - 3);
+                const end = Math.min(dataList.length - 1, targetIndex + 3);
+                
+                for(let i = start; i <= end; i++) {
+                    window.state.searchResultKeys.push(dataList[i].seq);
+                }
+                
+                window.openItemModal(window.state.currentTab, dataList[targetIndex]);
+            } else {
+                window.uiAlert(`ไม่พบข้อมูลลำดับที่ ${query}`, 'error');
+                window.state.searchResultKeys = [];
+                window.state.searchTargetSeq = '';
+            }
+            render();
+        };
+
+        window.clearSearch = () => {
+            window.state.searchQuery = '';
+            window.state.searchResultKeys = [];
+            window.state.searchTargetSeq = '';
+            render();
+        };
+
+        window.jumpToPost = (seq, tab) => {
+            window.state.view = 'user';
+            window.state.currentTab = tab;
+            render();
+            
+            setTimeout(() => {
+                const searchInput = document.getElementById('search_input');
+                if (searchInput) {
+                    searchInput.value = seq;
+                    window.handleSearch({ preventDefault: () => {} });
+                }
+            }, 10);
+        };
+
+        window.openItemModal = (type, item) => {
+            window.state.activeModalItem = { type, ...item };
+            window.updateItemModalUI();
+        };
+
+        window.closeItemModal = () => {
+            window.state.activeModalItem = null;
+            window.updateItemModalUI();
+        };
+
+        window.copyData = (type, seq, text) => {
+            const tempTextArea = document.createElement("textarea");
+            tempTextArea.value = text;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            
+            try {
+                document.execCommand("copy");
+                const key = `${type.toUpperCase()}_${seq}`;
+                window.state.copiedItems[key] = true;
+                
+                window.updateItemModalUI();
+                
+                const copyBtn = document.getElementById('copy-btn');
+                if(copyBtn) {
+                    const originalHtml = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<i data-lucide="check" size="14"></i> คัดลอกสำเร็จ';
+                    copyBtn.classList.replace('bg-indigo-600', 'bg-emerald-500');
+                    lucide.createIcons();
+                    setTimeout(() => {
+                        if(document.getElementById('copy-btn')) {
+                            copyBtn.innerHTML = originalHtml;
+                            copyBtn.classList.replace('bg-emerald-500', 'bg-indigo-600');
+                            lucide.createIcons();
+                        }
+                    }, 2000);
+                }
+            } catch (err) {
+                window.uiAlert("ไม่สามารถคัดลอกข้อความได้", "error");
+            }
+            document.body.removeChild(tempTextArea);
+        };
+
+        window.markPosted = async (type, seq) => {
+            if (!window.state.user) return;
+            const key = `${type.toUpperCase()}_${seq}`;
+            
+            if (!window.state.copiedItems[key] && window.state.currentUser.role !== 'admin') {
+                return window.uiAlert("กรุณากด 'คัดลอกข้อมูล' ก่อนถึงจะยืนยันได้", "error");
+            }
+
+            try {
+                const updateData = { 
+                    status: true, 
+                    by: window.state.currentUser.name || window.state.currentUser.passcode,
+                    timestamp: Date.now() 
+                };
+                const newStatus = { [key]: updateData };
+                
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'post_status'), newStatus, { merge: true });
+                await logAction('CHECK', `เช็คลิสต์โพสต์ ${type.toUpperCase()} ลำดับ ${seq}`);
+                
+                window.closeItemModal();
+            } catch (err) {
+                window.uiAlert("เกิดข้อผิดพลาดในการบันทึก", "error");
+            }
+        };
+
+        window.unmarkPosted = async (type, seq) => {
+            if (!window.state.user) return;
+            if (window.state.currentUser.role === 'user_b') {
+                return window.uiAlert("ระดับสิทธิ์ User B ไม่สามารถยกเลิกรายการที่ยืนยันไปแล้วได้", "error");
+            }
+
+            const key = `${type.toUpperCase()}_${seq}`;
+            try {
+                const newStatus = { [key]: null };
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'post_status'), newStatus, { merge: true });
+                await logAction('UNCHECK', `ยกเลิกเช็คลิสต์โพสต์ ${type.toUpperCase()} ลำดับ ${seq}`);
+                window.closeItemModal();
+            } catch (err) {
+                window.uiAlert("เกิดข้อผิดพลาดในการบันทึก", "error");
+            }
+        };
+
+        window.openUserModal = (passcode = null) => {
+            if (passcode && window.state.usersDB[passcode]) {
+                window.state.editingUser = { ...window.state.usersDB[passcode], isNew: false, oldPasscode: passcode };
+            } else {
+                window.state.editingUser = { passcode: '', name: '', role: 'user_b', access: 'both', isBlocked: false, isNew: true };
+            }
+            window.state.showUserManageModal = true;
+            window.updateUserManageModalUI();
+        };
+
+        window.closeUserModal = () => {
+            window.state.showUserManageModal = false;
+            window.state.editingUser = null;
+            window.updateUserManageModalUI();
+        };
+
+        window.saveUser = async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const u = window.state.editingUser;
+            const newPasscode = form.passcode.value.trim();
+            const newName = form.name.value.trim() || newPasscode;
+            
+            if(!newPasscode) return window.uiAlert("กรุณาระบุรหัสเข้าใช้งาน", "error");
+            
+            if(u.isNew && window.state.usersDB[newPasscode]) {
+                return window.uiAlert("รหัสเข้าใช้งานนี้มีในระบบแล้ว", "error");
+            }
+            if(!u.isNew && u.oldPasscode !== newPasscode && window.state.usersDB[newPasscode]) {
+                return window.uiAlert("รหัสเข้าใช้งานนี้ซ้ำกับผู้ใช้อื่นในระบบ", "error");
+            }
+
+            let assignedRole = form.role ? form.role.value : 'user_b';
+            if (newPasscode === '65030900') {
+                assignedRole = 'admin';
+            }
+
+            const userData = {
+                passcode: newPasscode,
+                name: newName,
+                role: assignedRole,
+                access: form.access.value,
+                isBlocked: form.isBlocked ? form.isBlocked.checked : false
+            };
+
+            try {
+                const newDB = { ...window.state.usersDB };
+                if(!u.isNew && u.oldPasscode !== newPasscode) {
+                    delete newDB[u.oldPasscode]; 
+                }
+                newDB[newPasscode] = userData;
+                
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'users_config'), newDB);
+                await logAction(u.isNew ? 'CREATE_USER' : 'UPDATE_USER', `จัดการผู้ใช้: ${newName}`);
+                
+                window.closeUserModal();
+                window.uiAlert("บันทึกข้อมูลเรียบร้อย", "success");
+            } catch (err) {
+                window.uiAlert("เกิดข้อผิดพลาดในการบันทึก", "error");
+            }
+        };
+
+        window.deleteUser = async (passcode) => {
+            if(passcode === '65030900') return window.uiAlert("ไม่สามารถลบแอดมินหลักได้", "error");
+            
+            const uName = window.state.usersDB[passcode]?.name || passcode;
+            window.uiConfirm(`ต้องการลบผู้ใช้งาน ${uName} ใช่หรือไม่?`, async () => {
+                try {
+                    const newDB = { ...window.state.usersDB };
+                    delete newDB[passcode];
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'users_config'), newDB);
+                    await logAction('DELETE_USER', `ลบผู้ใช้: ${uName}`);
+                    window.uiAlert("ลบข้อมูลเรียบร้อย", "success");
+                } catch(e) { window.uiAlert("เกิดข้อผิดพลาด", "error"); }
+            });
+        };
+
+        window.saveSettings = async (e) => {
+            e.preventDefault();
+            const minutes = parseInt(e.target.sessionTimeoutMinutes.value) || 0;
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'settings'), {
+                    sessionTimeoutMinutes: minutes
+                }, { merge: true });
+                window.state.settings.sessionTimeoutMinutes = minutes;
+                window.uiAlert('บันทึกการตั้งค่าเรียบร้อย', 'success');
+                await logAction('UPDATE_SETTINGS', `ตั้งเวลาเซสชันเป็น ${minutes === 0 ? 'ไม่จำกัดเวลา' : minutes + ' นาที'}`);
+                render();
+            } catch(err) {
+                window.uiAlert('เกิดข้อผิดพลาดในการบันทึกการตั้งค่า', 'error');
+            }
+        };
+
+        function renderHeader(title, subtitle) {
+            return `
+                <header class="bg-white border-b border-slate-100 flex-none px-4 sm:px-6 z-40 shadow-sm flex items-center justify-between safe-pt min-h-[3rem] relative">
+                    <div class="max-w-5xl mx-auto w-full flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md shadow-indigo-200">
+                                <i data-lucide="share-2" size="14"></i>
+                            </div>
+                            <div class="text-left leading-none">
+                                <h1 class="font-black text-xs text-slate-800 uppercase tracking-tight">${title}</h1>
+                                <p class="text-[8px] font-bold text-indigo-600 uppercase tracking-widest mt-0.5">
+                                    ${subtitle} &bull; ${window.state.currentUser.name}
+                                </p>
+                            </div>
+                        </div>
+                        <button onclick="window.logout()" class="p-1.5 sm:px-2.5 bg-slate-50 text-slate-400 hover:text-red-500 rounded-lg border border-slate-100 active:scale-95 transition-all flex items-center gap-1.5">
+                            <span class="hidden sm:inline text-[9px] font-bold uppercase">ออกจากระบบ</span>
+                            <i data-lucide="log-out" size="14"></i>
+                        </button>
+                    </div>
+                </header>
+            `;
+        }
+
         function renderLogin() {
             return `
-                <div class="h-screen flex items-center justify-center p-6 bg-slate-100">
-                    <div class="bg-white p-8 rounded-[2rem] shadow-xl w-full max-w-sm text-center page-transition">
-                        <div class="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg">
-                            <i data-lucide="send" size="40"></i>
+                <div class="h-[100dvh] w-full flex flex-col items-center justify-center p-4 bg-slate-50 relative overflow-hidden">
+                    <div class="absolute top-[-10%] left-[-10%] w-72 h-72 bg-indigo-200/40 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-pulse-slow"></div>
+                    <div class="absolute bottom-[-10%] right-[-10%] w-72 h-72 bg-pink-200/40 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-pulse-slow" style="animation-delay: 1s;"></div>
+                    
+                    <div class="max-w-sm w-full bg-white rounded-[2rem] p-6 shadow-2xl border border-white text-center page-transition relative z-10">
+                        <div class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-xl shadow-indigo-200">
+                            <i data-lucide="shield-check" size="28"></i>
                         </div>
-                        <h1 class="text-2xl font-black text-slate-800">PostCheck</h1>
-                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1 mb-8">Social Media Content System</p>
-                        <form onsubmit="window.handleLogin(event)" class="space-y-4 text-left">
-                            <label class="block text-[10px] font-black text-slate-400 uppercase ml-2">รหัสผ่านเข้าใช้งาน</label>
-                            <input id="login_id" type="password" placeholder="••••••••" class="w-full p-4 rounded-2xl bg-slate-50 border-2 border-slate-100 font-bold text-center text-lg focus:border-indigo-500 outline-none transition-all" required>
-                            <button type="submit" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 transition-all uppercase tracking-widest text-sm">เข้าสู่ระบบ</button>
+                        <h1 class="text-xl font-black text-slate-800 mb-1 tracking-tight">PostManager</h1>
+                        <p class="text-slate-400 text-[9px] font-bold uppercase mt-1 tracking-widest opacity-80">
+                            ระบุรหัสเข้าใช้งานเพื่อเข้าสู่ระบบ
+                        </p>
+                        
+                        <div class="mt-6">
+                            <form onsubmit="window.handleLogin(event)" class="space-y-4">
+                                <div class="relative">
+                                    <i data-lucide="key" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size="16"></i>
+                                    <input id="login_pwd" type="password" placeholder="รหัสเข้าใช้งาน (Passcode)" 
+                                        class="w-full py-3 pl-10 pr-4 rounded-xl bg-slate-50 border-2 border-slate-100 font-black text-2xl text-slate-800 outline-none focus:border-indigo-500 focus:bg-white transition-all text-center tracking-[0.2em] placeholder:text-xs placeholder:font-bold placeholder:tracking-normal placeholder:text-slate-400" required>
+                                </div>
+                                <button type="submit" 
+                                    class="w-full py-3 mt-1 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 active:scale-95 transition-all text-xs border-b-4 border-indigo-900 flex items-center justify-center gap-2 uppercase tracking-widest">
+                                    <span>เข้าสู่ระบบ</span> <i data-lucide="log-in" size="14"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <p class="absolute bottom-6 text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] z-10">PostManager System V3</p>
+                </div>
+            `;
+        }
+
+        function renderUserView() {
+            const uAccess = window.state.currentUser.access;
+            const isIg = window.state.currentTab === 'ig';
+            
+            if (uAccess === 'fb' && isIg) window.state.currentTab = 'fb';
+            if (uAccess === 'ig' && !isIg) window.state.currentTab = 'ig';
+            
+            const dataList = window.state.currentTab === 'ig' ? window.state.igData : window.state.fbData;
+            
+            // ระบบจัดเรียงตัวกรองตามที่กำหนด
+            const customOrder = [
+                "Urban architecture",
+                "Social and community",
+                "Infrastructure",
+                "Educational",
+                "Residential",
+                "Art and Culture",
+                "Healthcare",
+                "Sport and Activities",
+                "Environment",
+                "Museum"
+            ];
+
+            const uniqueExtras = [...new Set(dataList.map(item => item.extra).filter(Boolean))];
+            uniqueExtras.sort((a, b) => {
+                let idxA = customOrder.findIndex(o => a.includes(o));
+                let idxB = customOrder.findIndex(o => b.includes(o));
+                
+                // ถ้าทั้งคู่อยู่ในรายการที่กำหนด ให้เรียงตามลำดับในรายการ
+                if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                // ถ้า A อยู่ในรายการ ให้ A ขึ้นก่อน
+                if (idxA !== -1) return -1;
+                // ถ้า B อยู่ในรายการ ให้ B ขึ้นก่อน
+                if (idxB !== -1) return 1;
+                // ถ้าไม่อยู่ในรายการทั้งคู่ ให้เรียงตามตัวอักษรปกติ
+                return a.localeCompare(b, 'th');
+            });
+            
+            let isSearching = window.state.searchResultKeys.length > 0;
+            
+            let filteredDataList = dataList;
+            if (window.state.filterExtra && !isSearching) {
+                filteredDataList = dataList.filter(item => item.extra === window.state.filterExtra);
+            }
+
+            let pendingList = [];
+            let historyList = [];
+            
+            filteredDataList.forEach(item => {
+                const key = `${window.state.currentTab.toUpperCase()}_${item.seq}`;
+                const confInfo = window.state.confirmations[key];
+                if (confInfo && confInfo.status) {
+                    historyList.push({ ...item, confInfo });
+                } else {
+                    pendingList.push(item);
+                }
+            });
+            
+            historyList.sort((a,b) => parseFloat(a.seq) - parseFloat(b.seq));
+
+            let displayPending = pendingList;
+            let displayHistory = historyList;
+
+            if (isSearching) {
+                const allMapped = dataList.map(item => {
+                    const key = `${window.state.currentTab.toUpperCase()}_${item.seq}`;
+                    return {
+                        ...item,
+                        confInfo: window.state.confirmations[key],
+                        isTarget: item.seq === window.state.searchTargetSeq,
+                        isDimmed: item.seq !== window.state.searchTargetSeq
+                    };
+                }).filter(item => window.state.searchResultKeys.includes(item.seq));
+                
+                displayPending = allMapped; 
+                displayHistory = []; 
+            }
+
+            const renderItemCard = (item, isHistorySection = false) => {
+                const key = `${window.state.currentTab.toUpperCase()}_${item.seq}`;
+                const isPosted = item.confInfo && item.confInfo.status;
+                
+                let dimClass = '';
+                let isClickable = true;
+                const isLockedByFilter = !window.state.filterExtra && !isSearching;
+                
+                if (isLockedByFilter) {
+                    dimClass = 'opacity-50 pointer-events-none grayscale';
+                    isClickable = false;
+                } else if (isSearching && item.isDimmed) {
+                    dimClass = 'opacity-40 pointer-events-none grayscale';
+                    isClickable = false;
+                } else if (isHistorySection) {
+                    dimClass = 'opacity-80 hover:opacity-100';
+                } else {
+                    dimClass = 'hover:-translate-y-0.5 hover:shadow-md';
+                }
+                
+                const targetClass = item.isTarget ? 'border-indigo-400 ring-2 ring-indigo-100' : 'border-slate-200';
+                const typeColor = isIg ? 'text-ig bg-pink-50' : 'text-fb bg-blue-50';
+
+                return `
+                    <div onclick="${isClickable ? `window.openItemModal('${window.state.currentTab}', {seq: '${item.seq}', data: \`${item.data.replace(/`/g, '\\`')}\`, extra: \`${item.extra.replace(/`/g, '\\`')}\`})` : ''}" 
+                         class="bg-white p-3 rounded-xl border ${targetClass} shadow-sm transition-all cursor-pointer flex items-center gap-3 ${dimClass}">
+                        
+                        <div class="w-10 h-10 rounded-lg flex items-center justify-center font-black text-base ${typeColor} shrink-0">
+                            ${item.seq}
+                        </div>
+                        
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">ข้อมูลโพสต์</p>
+                                ${item.extra ? `<span class="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-bold border border-indigo-100 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">${item.extra}</span>` : ''}
+                            </div>
+                            <p class="text-xs font-medium text-slate-700 line-clamp-3 leading-relaxed">${item.data || 'ไม่มีข้อความ'}</p>
+                            ${isPosted && !isSearching ? `<p class="text-[9px] text-slate-400 mt-1"><i data-lucide="user" size="10" class="inline"></i> โดย: ${item.confInfo.by} &bull; ${new Date(item.confInfo.timestamp).toLocaleString('th-TH')}</p>` : ''}
+                        </div>
+                        
+                        <div class="shrink-0 flex flex-col items-center justify-center pl-2 border-l border-slate-100 w-16">
+                            ${isPosted ? `
+                                <i data-lucide="check-circle-2" size="20" class="text-emerald-500"></i>
+                                <span class="text-[8px] font-bold text-emerald-600 mt-1 uppercase">ยืนยันแล้ว</span>
+                            ` : `
+                                <i data-lucide="circle" size="20" class="text-slate-200"></i>
+                                <span class="text-[8px] font-bold text-slate-400 mt-1 uppercase">รอดำเนินการ</span>
+                            `}
+                        </div>
+                    </div>
+                `;
+            };
+
+            return `
+                ${renderHeader('รายการโพสต์', 'ผู้ใช้งานระบบ')}
+                
+                <div class="bg-white px-4 pt-2 pb-3 border-b border-slate-200 z-30 sticky top-0 shadow-sm">
+                    <div class="max-w-5xl mx-auto space-y-2">
+                        ${uAccess === 'both' ? `
+                        <div class="flex p-1 bg-slate-100 rounded-lg">
+                            <button onclick="window.setTab('ig')" class="flex-1 py-1.5 text-xs font-bold rounded-md transition-all flex justify-center items-center gap-1.5 ${isIg ? 'bg-white text-ig shadow-sm' : 'text-slate-400 hover:text-slate-600'}">
+                                <i data-lucide="instagram" size="14"></i> Instagram
+                            </button>
+                            <button onclick="window.setTab('fb')" class="flex-1 py-1.5 text-xs font-bold rounded-md transition-all flex justify-center items-center gap-1.5 ${!isIg ? 'bg-white text-fb shadow-sm' : 'text-slate-400 hover:text-slate-600'}">
+                                <i data-lucide="facebook" size="14"></i> Facebook
+                            </button>
+                        </div>
+                        ` : ''}
+
+                        <div class="flex flex-col sm:flex-row gap-2 mt-2">
+                            <!-- Filter Dropdown -->
+                            <select onchange="window.setFilterExtra(this.value)" class="sm:w-1/3 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 text-slate-600">
+                                <option value="">ข้อมูลอ้างอิง (แตะเพื่อเลือก)</option>
+                                ${uniqueExtras.map(ex => `<option value="${ex}" ${window.state.filterExtra === ex ? 'selected' : ''}>${ex}</option>`).join('')}
+                            </select>
+                            
+                            <!-- Search -->
+                            <form onsubmit="window.handleSearch(event)" class="relative flex-1 flex gap-2">
+                                <div class="relative flex-1">
+                                    <i data-lucide="search" size="14" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                    <input type="text" id="search_input" value="${window.state.searchQuery}" placeholder="ค้นหาด้วยลำดับเลขโพสต์..." class="w-full pl-8 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-500 focus:bg-white outline-none transition-all text-xs">
+                                    ${window.state.searchQuery ? `
+                                        <button type="button" onclick="window.clearSearch()" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                            <i data-lucide="x-circle" size="14"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>
+                                <button type="submit" class="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold hover:bg-black transition-colors text-xs">ค้นหา</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="scrollable-content custom-scrollbar bg-slate-50">
+                    <main class="max-w-5xl mx-auto px-4 py-5 page-transition">
+                        ${(!window.state.filterExtra && !isSearching && dataList.length > 0) ? `
+                            <div class="bg-indigo-50 border border-indigo-100 text-indigo-700 px-4 py-3 rounded-xl mb-4 flex items-center gap-2 text-xs font-bold shadow-sm animate-pulse-slow">
+                                <i data-lucide="lock" size="16"></i>
+                                กรุณาเลือก "ข้อมูลอ้างอิง" จากเมนูด้านบน เพื่อปลดล็อคการทำรายการโพสต์
+                            </div>
+                        ` : ''}
+
+                        ${(displayPending.length === 0 && displayHistory.length === 0) ? `
+                            <div class="text-center py-20 text-slate-400 flex flex-col items-center">
+                                <i data-lucide="inbox" size="36" class="mb-3 opacity-50"></i>
+                                <p class="text-xs font-bold">ไม่มีข้อมูลในหมวดหมู่นี้</p>
+                            </div>
+                        ` : `
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                ${displayPending.map(item => renderItemCard(item, false)).join('')}
+                            </div>
+                            ${(!isSearching && displayPending.length === 0 && window.state.filterExtra) ? '<p class="text-center text-xs font-bold text-emerald-500 py-4"><i data-lucide="check-circle" class="inline mr-1" size="14"></i>จัดการโพสต์หมวดนี้ครบแล้ว!</p>' : ''}
+                            
+                            ${displayHistory.length > 0 ? `
+                                <div class="mt-8 border-t-2 border-dashed border-slate-200 pt-6">
+                                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <i data-lucide="history" size="14"></i> ประวัติที่ทำรายการแล้ว
+                                    </h3>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        ${displayHistory.map(item => renderItemCard(item, true)).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        `}
+                    </main>
+                </div>
+            `;
+        }
+
+        window.updateItemModalUI = () => {
+            const container = document.getElementById('item-modal-container');
+            const item = window.state.activeModalItem;
+            
+            if (!item) {
+                if(container) container.innerHTML = '';
+                return;
+            }
+
+            const isIg = item.type === 'ig';
+            const icon = isIg ? 'instagram' : 'facebook';
+            const typeColor = isIg ? 'text-ig' : 'text-fb';
+            const key = `${item.type.toUpperCase()}_${item.seq}`;
+            
+            const confInfo = window.state.confirmations[key];
+            const isPosted = confInfo && confInfo.status;
+            const isCopied = window.state.copiedItems[key] === true;
+            
+            const userRole = window.state.currentUser.role;
+            const canCancel = userRole === 'admin' || userRole === 'user_a';
+
+            const safeData = item.data.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+
+            container.innerHTML = `
+                <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-3 page-transition">
+                    <div class="bg-white rounded-2xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+                        
+                        <div class="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50 shrink-0">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 bg-white shadow-sm rounded-lg flex items-center justify-center ${typeColor}">
+                                    <i data-lucide="${icon}" size="18"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-black text-slate-800 uppercase">ลำดับที่ ${item.seq}</h3>
+                                    <p class="text-[9px] font-bold text-slate-400 tracking-wider">${isIg ? 'Instagram Post' : 'Facebook Post'}</p>
+                                </div>
+                            </div>
+                            <button onclick="window.closeItemModal()" class="w-7 h-7 flex items-center justify-center bg-white text-slate-400 hover:text-slate-600 rounded-full shadow-sm border border-slate-200 transition-colors">
+                                <i data-lucide="x" size="14"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="p-4 overflow-y-auto custom-scrollbar bg-white">
+                            <div class="mb-2 flex justify-between items-center">
+                                <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">เนื้อหาข้อมูล (1.2 / 2.2)</p>
+                                ${item.extra ? `<span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-bold border border-indigo-100 flex items-center gap-1.5"><i data-lucide="calendar" size="12"></i> ${item.extra}</span>` : ''}
+                            </div>
+                            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 font-medium whitespace-pre-wrap leading-relaxed shadow-inner select-all max-h-[50vh] overflow-y-auto custom-scrollbar">${item.data}</div>
+                            
+                            ${isPosted ? `
+                                <div class="mt-4 bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-xs font-medium text-emerald-700 flex items-start gap-2">
+                                    <i data-lucide="info" size="14" class="mt-0.5 shrink-0"></i>
+                                    <div>
+                                        โพสต์แล้วโดย: <span class="font-bold">${confInfo.by}</span><br>
+                                        เวลา: <span class="font-bold">${new Date(confInfo.timestamp).toLocaleString('th-TH')}</span>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="p-4 border-t border-slate-100 bg-white shrink-0 space-y-3">
+                            <button id="copy-btn" onclick="window.copyData('${item.type}', '${item.seq}', '${safeData}')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 text-xs uppercase tracking-wide">
+                                <i data-lucide="copy" size="16"></i> คัดลอกข้อมูล
+                            </button>
+                            
+                            <div class="pt-3 border-t border-slate-100 flex items-center gap-3">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex-1">เช็คลิสต์การโพสต์</div>
+                                ${isPosted ? `
+                                    ${canCancel ? `
+                                        <button onclick="window.unmarkPosted('${item.type}', '${item.seq}')" class="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-colors">
+                                            <i data-lucide="check-square" size="14"></i> ยืนยันแล้ว (กดยกเลิก)
+                                        </button>
+                                    ` : `
+                                        <button class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-emerald-600 border border-slate-200 rounded-lg text-xs font-bold cursor-not-allowed opacity-80">
+                                            <i data-lucide="check-square" size="14"></i> ยืนยันแล้ว (ล็อค)
+                                        </button>
+                                    `}
+                                ` : `
+                                    <button onclick="window.markPosted('${item.type}', '${item.seq}')" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${(isCopied || canCancel) ? 'bg-slate-900 text-white hover:bg-black shadow-md' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}">
+                                        <i data-lucide="${(isCopied || canCancel) ? 'square' : 'lock'}" size="14"></i> 
+                                        ${(isCopied || canCancel) ? 'คลิกเพื่อยืนยันว่าโพสต์แล้ว' : 'คัดลอกก่อนกดยืนยัน'}
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        };
+
+        function renderAdminView() {
+            const igList = window.state.igData;
+            const fbList = window.state.fbData;
+            const tab = window.state.adminTab;
+            const isMaster = window.state.currentUser.passcode === '65030900';
+            
+            const totalIg = igList.length;
+            const totalFb = fbList.length;
+            
+            let postedIg = 0;
+            igList.forEach(item => { if (window.state.confirmations[`IG_${item.seq}`]?.status) postedIg++; });
+            
+            let postedFb = 0;
+            fbList.forEach(item => { if (window.state.confirmations[`FB_${item.seq}`]?.status) postedFb++; });
+
+            const allSeqs = [...new Set([...igList.map(i=>i.seq), ...fbList.map(i=>i.seq)])].sort((a,b) => parseFloat(a) - parseFloat(b));
+
+            return `
+                ${renderHeader('Administrator', 'ระบบจัดการโพสต์ V3')}
+                
+                <div class="bg-white border-b border-slate-200 z-30 sticky top-0 px-4">
+                    <div class="max-w-5xl mx-auto flex gap-6 overflow-x-auto custom-scrollbar">
+                        <button onclick="window.setAdminTab('overview')" class="py-3 text-[11px] font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${tab === 'overview' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}">
+                            <i data-lucide="pie-chart" class="inline mr-1" size="14"></i> ภาพรวม
+                        </button>
+                        <button onclick="window.setAdminTab('users')" class="py-3 text-[11px] font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${tab === 'users' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}">
+                            <i data-lucide="users" class="inline mr-1" size="14"></i> จัดการผู้ใช้
+                        </button>
+                        <button onclick="window.setAdminTab('logs')" class="py-3 text-[11px] font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${tab === 'logs' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}">
+                            <i data-lucide="history" class="inline mr-1" size="14"></i> ประวัติระบบ
+                        </button>
+                        ${isMaster ? `
+                        <button onclick="window.setAdminTab('settings')" class="py-3 text-[11px] font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${tab === 'settings' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}">
+                            <i data-lucide="settings" class="inline mr-1" size="14"></i> ตั้งค่าระบบ
+                        </button>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <div class="scrollable-content custom-scrollbar bg-slate-50">
+                    <main class="max-w-5xl mx-auto px-4 py-5 space-y-4 page-transition text-left">
+                        
+                        ${tab === 'overview' ? `
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="bg-gradient-to-br from-pink-500 to-rose-600 p-4 rounded-xl text-white shadow-md relative overflow-hidden">
+                                    <i data-lucide="instagram" size="48" class="absolute -right-2 -bottom-2 text-white opacity-10"></i>
+                                    <p class="text-[9px] font-bold uppercase tracking-widest opacity-90 mb-1">สถานะ IG</p>
+                                    <div class="flex items-end gap-1.5">
+                                        <p class="text-2xl font-black">${postedIg}</p>
+                                        <p class="text-xs font-bold opacity-80 mb-1">/ ${totalIg}</p>
+                                    </div>
+                                </div>
+                                <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-4 rounded-xl text-white shadow-md relative overflow-hidden">
+                                    <i data-lucide="facebook" size="48" class="absolute -right-2 -bottom-2 text-white opacity-10"></i>
+                                    <p class="text-[9px] font-bold uppercase tracking-widest opacity-90 mb-1">สถานะ FB</p>
+                                    <div class="flex items-end gap-1.5">
+                                        <p class="text-2xl font-black">${postedFb}</p>
+                                        <p class="text-xs font-bold opacity-80 mb-1">/ ${totalFb}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 gap-3">
+                                    <h2 class="text-base font-black text-slate-800 flex items-center gap-2">
+                                        <i data-lucide="list" class="text-indigo-600" size="18"></i> รายการโพสต์ทั้งหมด
+                                    </h2>
+                                    <div class="flex gap-2 w-full sm:w-auto">
+                                        <button onclick="window.exportToExcel()" class="flex-1 sm:flex-none justify-center items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors text-[10px] font-bold uppercase tracking-wider border border-emerald-200 flex">
+                                            <i data-lucide="file-spreadsheet" size="14"></i> Excel
+                                        </button>
+                                        <button onclick="window.openExportPreview()" class="flex-1 sm:flex-none justify-center items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors text-[10px] font-bold uppercase tracking-wider shadow-sm flex">
+                                            <i data-lucide="printer" size="14"></i> PDF/PNG
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="overflow-x-auto custom-scrollbar p-1 -mx-1">
+                                    <table class="w-full min-w-[600px] text-left border-collapse">
+                                        <thead class="border-b-2 border-slate-100 text-[9px] font-black uppercase text-slate-400 tracking-wider">
+                                            <tr>
+                                                <th class="pb-2 pl-3">ลำดับ</th>
+                                                <th class="pb-2 text-center">ข้อมูล 1.3/2.3</th>
+                                                <th class="pb-2 text-center">Instagram</th>
+                                                <th class="pb-2 text-center">Facebook</th>
+                                                <th class="pb-2 text-right pr-3">สถานะรวม</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-50">
+                                            ${allSeqs.map(seq => {
+                                                const igItem = igList.find(i => i.seq === seq);
+                                                const fbItem = fbList.find(i => i.seq === seq);
+                                                const hasIg = !!igItem;
+                                                const hasFb = !!fbItem;
+                                                const extraData = (igItem?.extra || fbItem?.extra || '-');
+                                                
+                                                const igConf = hasIg ? window.state.confirmations[`IG_${seq}`] : null;
+                                                const fbConf = hasFb ? window.state.confirmations[`FB_${seq}`] : null;
+                                                
+                                                const renderStatus = (exists, conf) => {
+                                                    if (!exists) return '<span class="text-[9px] text-slate-300 font-bold">-</span>';
+                                                    if (conf?.status) return `<div class="flex flex-col items-center"><i data-lucide="check-circle-2" size="16" class="text-emerald-500"></i><span class="text-[7px] text-slate-400 mt-0.5">${conf.by}</span></div>`;
+                                                    return '<i data-lucide="circle" size="16" class="text-slate-200 mx-auto"></i>';
+                                                };
+
+                                                let overall = 'สมบูรณ์';
+                                                let overallClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                                                if ((hasIg && !igConf?.status) || (hasFb && !fbConf?.status)) {
+                                                    overall = 'รอโพสต์';
+                                                    overallClass = 'bg-amber-50 text-amber-600 border-amber-200';
+                                                }
+
+                                                return `
+                                                    <tr class="hover:bg-slate-50/50 transition-colors cursor-pointer" onclick="window.jumpToPost('${seq}', '${hasIg ? 'ig' : 'fb'}')">
+                                                        <td class="py-2 pl-3 font-black text-slate-800 text-sm">
+                                                            ${seq} <i data-lucide="external-link" size="10" class="inline text-slate-300"></i>
+                                                        </td>
+                                                        <td class="py-2 text-center text-[10px] text-indigo-600 font-bold">${extraData}</td>
+                                                        <td class="py-2 text-center">${renderStatus(hasIg, igConf)}</td>
+                                                        <td class="py-2 text-center">${renderStatus(hasFb, fbConf)}</td>
+                                                        <td class="py-2 text-right pr-3">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 ${overallClass} text-[8px] font-bold rounded uppercase border">
+                                                                ${overall}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${tab === 'users' ? `
+                            <div class="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h2 class="text-base font-black text-slate-800 flex items-center gap-2">
+                                        <i data-lucide="users" class="text-indigo-600" size="18"></i> บัญชีผู้ใช้งาน
+                                    </h2>
+                                    <button onclick="window.openUserModal()" class="px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-bold rounded-lg shadow-sm hover:bg-indigo-700 flex items-center gap-1.5 uppercase tracking-wider">
+                                        <i data-lucide="plus" size="14"></i> เพิ่มบัญชี
+                                    </button>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    ${Object.values(window.state.usersDB).map(u => {
+                                        let roleDisplay = 'User B (โพสต์)';
+                                        let roleClass = 'bg-slate-200 text-slate-600';
+                                        if (u.role === 'admin') { roleDisplay = 'Admin'; roleClass = 'bg-purple-100 text-purple-700'; }
+                                        if (u.role === 'user_a') { roleDisplay = 'User A (ยกเลิกได้)'; roleClass = 'bg-indigo-100 text-indigo-700'; }
+
+                                        return `
+                                        <div class="border border-slate-100 rounded-xl p-3 bg-slate-50 flex flex-col justify-between ${u.isBlocked ? 'opacity-50 grayscale' : ''}">
+                                            <div class="flex justify-between items-start mb-2">
+                                                <div>
+                                                    <p class="font-black text-slate-800 text-xs">${u.name}</p>
+                                                    <p class="text-[10px] font-bold text-slate-400 mb-1">รหัส: ${u.passcode}</p>
+                                                    <div class="flex flex-wrap gap-1 mt-1.5">
+                                                        <span class="px-1.5 py-0.5 ${roleClass} text-[8px] font-bold rounded uppercase">${roleDisplay}</span>
+                                                        <span class="px-1.5 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 text-[8px] font-bold rounded uppercase">แพลตฟอร์ม: ${u.access}</span>
+                                                        ${u.isBlocked ? '<span class="px-1.5 py-0.5 bg-red-100 text-red-600 text-[8px] font-bold rounded uppercase">BLOCKED</span>' : ''}
+                                                    </div>
+                                                </div>
+                                                <div class="flex gap-1">
+                                                    <button onclick="window.openUserModal('${u.passcode}')" class="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"><i data-lucide="edit-2" size="14"></i></button>
+                                                    ${u.passcode !== '65030900' ? `<button onclick="window.deleteUser('${u.passcode}')" class="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"><i data-lucide="trash-2" size="14"></i></button>` : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `}).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${tab === 'logs' ? `
+                            <div class="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                                <h2 class="text-base font-black text-slate-800 flex items-center gap-2 mb-4">
+                                    <i data-lucide="activity" class="text-indigo-600" size="18"></i> ประวัติระบบ
+                                </h2>
+                                
+                                <div class="space-y-2">
+                                    ${[...window.state.actionLogs].sort((a,b)=>b.timestamp - a.timestamp).slice(0, 100).map(log => {
+                                        let icon = 'activity'; let color = 'text-slate-500'; let bg = 'bg-slate-100';
+                                        if (log.action === 'CHECK') { icon = 'check'; color = 'text-green-600'; bg = 'bg-green-100'; }
+                                        if (log.action === 'UNCHECK') { icon = 'x'; color = 'text-red-600'; bg = 'bg-red-100'; }
+                                        if (log.action === 'LOGIN') { icon = 'log-in'; color = 'text-indigo-600'; bg = 'bg-indigo-100'; }
+                                        if (log.action === 'UPDATE_USER' || log.action === 'CREATE_USER') { icon = 'user'; color = 'text-blue-600'; bg = 'bg-blue-100'; }
+                                        if (log.action === 'DELETE_USER') { icon = 'trash'; color = 'text-red-600'; bg = 'bg-red-100'; }
+                                        if (log.action === 'UPDATE_SETTINGS') { icon = 'settings'; color = 'text-orange-600'; bg = 'bg-orange-100'; }
+                                        
+                                        return `
+                                            <div class="flex items-start gap-3 p-2.5 border border-slate-100 rounded-lg bg-slate-50">
+                                                <div class="w-7 h-7 rounded-full ${bg} ${color} flex items-center justify-center shrink-0 mt-0.5">
+                                                    <i data-lucide="${icon}" size="12"></i>
+                                                </div>
+                                                <div class="flex-1">
+                                                    <p class="text-[11px] font-bold text-slate-700">${log.details}</p>
+                                                    <p class="text-[9px] text-slate-400 mt-0.5">โดย: <span class="font-bold text-indigo-500">${log.name}</span> &bull; ${new Date(log.timestamp).toLocaleString('th-TH')}</p>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                    ${window.state.actionLogs.length === 0 ? '<p class="text-center text-xs text-slate-400 py-10">ไม่มีประวัติ</p>' : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${tab === 'settings' && isMaster ? `
+                            <div class="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                                <h2 class="text-base font-black text-slate-800 flex items-center gap-2 mb-4">
+                                    <i data-lucide="settings" class="text-indigo-600" size="18"></i> ตั้งค่าเวลาใช้งาน (Session)
+                                </h2>
+                                
+                                <form onsubmit="window.saveSettings(event)" class="space-y-4 max-w-sm">
+                                    <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 mb-2">
+                                        <p class="text-[10px] font-medium text-indigo-800 leading-relaxed">
+                                            ตั้งค่าเป็น <strong>0</strong> เพื่อ <span class="font-bold underline">จดจำการล็อกอินไว้ตลอดไป</span> (ไม่เด้งออก)
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 mb-1">เวลาหมดอายุเซสชัน (นาที)</label>
+                                        <div class="flex items-center gap-2">
+                                            <input type="number" name="sessionTimeoutMinutes" value="${window.state.settings?.sessionTimeoutMinutes || 0}" min="0" class="w-full p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold outline-none focus:border-indigo-500 text-center">
+                                            <span class="text-[10px] font-bold text-slate-400">นาที</span>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="w-full py-2.5 bg-indigo-600 text-white font-bold rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center justify-center gap-1.5 mt-2 text-xs uppercase tracking-wider">
+                                        <i data-lucide="save" size="14"></i> บันทึกการตั้งค่า
+                                    </button>
+                                </form>
+                            </div>
+                        ` : ''}
+
+                    </main>
+                </div>
+            `;
+        }
+
+        window.updateUserManageModalUI = () => {
+            const container = document.getElementById('user-manage-modal-container');
+            if (container) {
+                container.innerHTML = renderUserManageModal();
+                lucide.createIcons();
+            }
+        };
+
+        function renderUserManageModal() {
+            if (!window.state.showUserManageModal) return "";
+            const u = window.state.editingUser;
+
+            return `
+                <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-3 page-transition">
+                    <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl flex flex-col overflow-hidden">
+                        <div class="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50 shrink-0">
+                            <h3 class="text-sm font-black text-slate-800 flex items-center gap-2">
+                                <i data-lucide="${u.isNew ? 'user-plus' : 'edit'}" class="text-indigo-600" size="16"></i> 
+                                ${u.isNew ? 'เพิ่มผู้ใช้งานใหม่' : 'แก้ไขบัญชี'}
+                            </h3>
+                            <button onclick="window.closeUserModal()" class="w-7 h-7 flex items-center justify-center bg-white text-slate-400 hover:text-slate-600 rounded-full shadow-sm border border-slate-200"><i data-lucide="x" size="14"></i></button>
+                        </div>
+                        
+                        <form onsubmit="window.saveUser(event)" class="p-4 space-y-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-1">รหัสผ่านสำหรับเข้าใช้งาน</label>
+                                <input type="text" name="passcode" value="${u.passcode}" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold outline-none focus:border-indigo-500" placeholder="ตั้งรหัส" required>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-1">ชื่อแสดงผล (Name)</label>
+                                <input type="text" name="name" value="${u.name}" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold outline-none focus:border-indigo-500" placeholder="ชื่อในประวัติ">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 mb-1">ระดับสิทธิ์ (Role)</label>
+                                    <select name="role" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-bold outline-none focus:border-indigo-500" ${u.passcode === '65030900' ? 'disabled' : ''}>
+                                        ${u.passcode === '65030900' ? `<option value="admin">Admin (ผู้ดูแลสูงสุด)</option>` : `
+                                        <option value="user_b" ${u.role === 'user_b' ? 'selected' : ''}>User B (โพสต์อย่างเดียว)</option>
+                                        <option value="user_a" ${u.role === 'user_a' ? 'selected' : ''}>User A (โพสต์และยกเลิกได้)</option>
+                                        `}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 mb-1">การเข้าถึงแพลตฟอร์ม</label>
+                                    <select name="access" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-bold outline-none focus:border-indigo-500">
+                                        <option value="both" ${u.access === 'both' ? 'selected' : ''}>ทั้ง IG และ FB</option>
+                                        <option value="ig" ${u.access === 'ig' ? 'selected' : ''}>เฉพาะ IG</option>
+                                        <option value="fb" ${u.access === 'fb' ? 'selected' : ''}>เฉพาะ FB</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <label class="flex items-center gap-2 mt-2 p-2.5 bg-red-50 rounded-xl border border-red-100 cursor-pointer">
+                                <input type="checkbox" name="isBlocked" ${u.isBlocked ? 'checked' : ''} class="w-3.5 h-3.5 accent-red-500">
+                                <span class="text-[10px] font-bold text-red-600">ระงับการใช้งานบัญชีนี้</span>
+                            </label>
+
+                            <button type="submit" class="w-full py-3 mt-1 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 active:scale-95 transition-all text-xs uppercase tracking-widest flex justify-center items-center gap-1.5">
+                                <i data-lucide="save" size="14"></i> บันทึกข้อมูล
+                            </button>
                         </form>
                     </div>
                 </div>
             `;
         }
 
-        function renderStudentView() {
-            const data = window.state.sheetData[0] || {}; // สมมติให้แสดงแถวแรกที่ดึงมา
-            const conf = window.state.confirmations[window.state.studentId] || {};
+        window.exportToExcel = () => {
+            const igList = window.state.igData;
+            const fbList = window.state.fbData;
+            const allSeqs = [...new Set([...igList.map(i=>i.seq), ...fbList.map(i=>i.seq)])].sort((a,b) => parseFloat(a) - parseFloat(b));
+            
+            if(allSeqs.length === 0) return window.uiAlert("ไม่มีข้อมูลให้ส่งออก", "error");
+            
+            const exportData = allSeqs.map(seq => {
+                const igItem = igList.find(i => i.seq === seq);
+                const fbItem = fbList.find(i => i.seq === seq);
+                const igConf = window.state.confirmations[`IG_${seq}`];
+                const fbConf = window.state.confirmations[`FB_${seq}`];
 
-            return `
-                <header class="bg-white p-4 border-b flex justify-between items-center sticky top-0 z-50">
-                    <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white"><i data-lucide="layout" size="16"></i></div>
-                        <span class="font-black text-sm uppercase">Post Data</span>
-                    </div>
-                    <button onclick="window.logout()" class="text-slate-400"><i data-lucide="log-out" size="20"></i></button>
-                </header>
-                <div class="p-4 space-y-4 max-w-lg mx-auto scrollable-content">
-                    ${renderPostCard('Instagram (IG)', 'ig', data.ig_id, data.ig_content, conf.ig)}
-                    ${renderPostCard('Facebook (FB)', 'fb', data.fb_id, data.fb_content, conf.fb)}
-                </div>
-            `;
-        }
-
-        function renderPostCard(title, type, id, content, isDone) {
-            const hasCopied = window.state.copiedStates[type];
-            return `
-                <div class="bg-white p-5 rounded-3xl border-2 ${isDone ? 'border-green-500 bg-green-50' : 'border-slate-100'} shadow-sm page-transition">
-                    <div class="flex justify-between items-center mb-4">
-                        <span class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase">ลำดับ: ${id || '-'}</span>
-                        <h3 class="font-black text-slate-800">${title}</h3>
-                    </div>
-                    <div class="bg-white border border-slate-200 p-4 rounded-2xl mb-4 relative">
-                        <p class="text-sm text-slate-600 leading-relaxed">${content || 'ไม่มีข้อมูล'}</p>
-                        <button onclick="window.copyText('${content?.replace(/'/g, "\\'")}', '${type}')" class="mt-3 w-full py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-indigo-100 transition-all">
-                            <i data-lucide="copy" size="14"></i> คัดลอกเนื้อหา
-                        </button>
-                    </div>
-                    <button onclick="window.toggleCheck('${type}')" class="w-full py-4 ${isDone ? 'bg-green-500 shadow-green-200' : hasCopied ? 'bg-slate-900 shadow-slate-200' : 'bg-slate-200 cursor-not-allowed'} text-white rounded-2xl font-bold shadow-lg transition-all flex items-center justify-center gap-2">
-                        <i data-lucide="${isDone ? 'check-circle' : 'send'}" size="18"></i>
-                        ${isDone ? 'โพสต์เรียบร้อยแล้ว' : 'ยืนยันการโพสต์'}
-                    </button>
-                </div>
-            `;
-        }
-
-        function renderAdminView() {
-            const students = Object.keys(window.state.confirmations);
-            return `
-                <header class="bg-white p-4 border-b flex justify-between items-center sticky top-0 z-50">
-                    <h1 class="font-black uppercase text-sm">Admin Dashboard</h1>
-                    <div class="flex gap-2">
-                        <button onclick="window.exportToImage()" class="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><i data-lucide="image" size="18"></i></button>
-                        <button onclick="window.logout()" class="p-2 text-slate-400"><i data-lucide="log-out" size="18"></i></button>
-                    </div>
-                </header>
-                <div class="p-4 max-w-2xl mx-auto space-y-4">
-                    <div class="bg-indigo-600 p-6 rounded-[2rem] text-white shadow-xl">
-                        <p class="text-xs font-bold opacity-70 uppercase tracking-widest">ผู้ใช้งานที่ทำรายการแล้ว</p>
-                        <h2 class="text-4xl font-black mt-1">${students.length} <span class="text-lg font-normal">คน</span></h2>
-                    </div>
-                    <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm" id="admin-report">
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-50 border-b border-slate-100">
-                                <tr class="text-[10px] font-black text-slate-400 uppercase">
-                                    <th class="p-4">User ID</th>
-                                    <th class="p-4 text-center">IG Status</th>
-                                    <th class="p-4 text-center">FB Status</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-50">
-                                ${students.map(sid => {
-                                    const c = window.state.confirmations[sid];
-                                    return `
-                                        <tr>
-                                            <td class="p-4 font-bold text-slate-700">${sid}</td>
-                                            <td class="p-4 text-center">${c.ig ? '✅' : '❌'}</td>
-                                            <td class="p-4 text-center">${c.fb ? '✅' : '❌'}</td>
-                                        </tr>
-                                    `;
-                                }).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-        }
-
-        // --- Utility Functions ---
-        window.uiAlert = (message, type = 'info') => {
-            const colors = type === 'error' ? 'bg-red-500' : type === 'success' ? 'bg-green-500' : 'bg-indigo-600';
-            const container = document.getElementById('modal-container');
-            container.innerHTML = `
-                <div class="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] ${colors} text-white px-6 py-3 rounded-2xl font-bold shadow-2xl page-transition text-sm">
-                    ${message}
-                </div>
-            `;
-            setTimeout(() => container.innerHTML = '', 3000);
-        };
-
-        window.exportToImage = () => {
-            const el = document.getElementById('admin-report');
-            htmlToImage.toPng(el).then(dataUrl => {
-                const link = document.createElement('a');
-                link.download = 'PostCheck_Report.png';
-                link.href = dataUrl;
-                link.click();
+                return {
+                    'ลำดับโพสต์': seq,
+                    'ข้อมูลอ้างอิง (1.3/2.3)': (igItem?.extra || fbItem?.extra || '-'),
+                    'สถานะ IG': igConf?.status ? 'โพสต์แล้ว' : 'รอโพสต์',
+                    'ผู้โพสต์ IG': igConf?.by || '-',
+                    'เวลา IG': igConf ? new Date(igConf.timestamp).toLocaleString('th-TH') : '-',
+                    'สถานะ FB': fbConf?.status ? 'โพสต์แล้ว' : 'รอโพสต์',
+                    'ผู้โพสต์ FB': fbConf?.by || '-',
+                    'เวลา FB': fbConf ? new Date(fbConf.timestamp).toLocaleString('th-TH') : '-'
+                };
             });
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Post Status");
+            XLSX.writeFile(wb, "PostManager_Report.xlsx");
         };
+
+        const generateExportPagesHTML = () => {
+            const igList = window.state.igData;
+            const fbList = window.state.fbData;
+            const allSeqs = [...new Set([...igList.map(i=>i.seq), ...fbList.map(i=>i.seq)])].sort((a,b) => parseFloat(a) - parseFloat(b));
+            
+            const rowsPerPage = 25; 
+            const pagesHtml = [];
+            const totalPages = Math.ceil(allSeqs.length / rowsPerPage) || 1;
+            const timestamp = new Date().toLocaleString('th-TH');
+            const isLandscape = window.state.exportOrientation === 'landscape';
+            const pageWidth = isLandscape ? 1123 : 794;
+            const pageHeight = isLandscape ? 794 : 1123;
+
+            for (let i = 0; i < totalPages; i++) {
+                const chunk = allSeqs.slice(i * rowsPerPage, (i + 1) * rowsPerPage);
+                
+                const rowsHtml = chunk.map(seq => {
+                    const igItem = igList.find(i => i.seq === seq);
+                    const fbItem = fbList.find(i => i.seq === seq);
+                    const extraData = (igItem?.extra || fbItem?.extra || '-');
+                    
+                    const igConf = window.state.confirmations[`IG_${seq}`];
+                    const fbConf = window.state.confirmations[`FB_${seq}`];
+
+                    const getStatusHtml = (conf) => {
+                        if (conf?.status) return `<div style="color: #10b981; font-weight: bold; font-size: 14px;">✔ <span style="font-size:8px; color:#94a3b8; display:block;">${conf.by}</span></div>`;
+                        return `<span style="color: #cbd5e1; font-weight: bold; font-size: 14px;">-</span>`;
+                    };
+
+                    return `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 10px 10px; font-size: 12px; color: #0f172a; font-weight: 800;">${seq}</td>
+                            <td style="padding: 10px 6px; font-size: 10px; color: #4f46e5; text-align: center;">${extraData}</td>
+                            <td style="padding: 10px 6px; text-align: center;">${getStatusHtml(igConf)}</td>
+                            <td style="padding: 10px 6px; text-align: center;">${getStatusHtml(fbConf)}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                const pageHtml = `
+                    <div id="capture-layout-wrapper-${i}" style="width: ${pageWidth}px; height: ${pageHeight}px; background-color: #ffffff; padding: 40px 50px; font-family: 'Prompt', sans-serif; display: flex; flex-direction: column; box-sizing: border-box;">
+                        <style> * { font-family: 'Prompt', sans-serif !important; } </style>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #4f46e5; padding-bottom: 15px; margin-bottom: 20px;">
+                            <div>
+                                <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #0f172a; text-transform: uppercase;">PostManager Report</h1>
+                                <p style="margin: 4px 0 0 0; font-size: 11px; color: #64748b; font-weight: 600;">รายงานสถานะการโพสต์</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <p style="margin: 0; font-size: 12px; font-weight: 800; color: #0f172a;">หน้า ${i + 1} / ${totalPages}</p>
+                                <p style="margin: 4px 0 0 0; font-size: 9px; color: #94a3b8;">${timestamp}</p>
+                            </div>
+                        </div>
+                        <div style="flex: 1; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                <thead>
+                                    <tr style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                                        <th style="padding: 12px 10px; font-size: 10px; font-weight: 800; color: #475569;">ลำดับ</th>
+                                        <th style="padding: 12px 6px; font-size: 10px; font-weight: 800; color: #475569; text-align: center;">ข้อมูล (1.3/2.3)</th>
+                                        <th style="padding: 12px 6px; font-size: 10px; font-weight: 800; color: #475569; text-align: center;">Instagram</th>
+                                        <th style="padding: 12px 6px; font-size: 10px; font-weight: 800; color: #475569; text-align: center;">Facebook</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rowsHtml}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                pagesHtml.push(pageHtml);
+            }
+            return pagesHtml;
+        };
+
+        window.openExportPreview = async () => {
+            window.state.exportOrientation = 'portrait'; 
+            window.state.showPreviewModal = true;
+            window.updatePreviewModalUI();
+            await window.refreshExportPreview();
+        };
+
+        window.changeExportOrientation = async (orientation) => {
+            window.state.exportOrientation = orientation;
+            window.updatePreviewModalUI(); 
+            await window.refreshExportPreview(); 
+        };
+
+        window.refreshExportPreview = async () => {
+            const myGenId = ++window.currentExportGenId; 
+            const previewContainer = document.getElementById('preview-images-container');
+            const loadingText = document.getElementById('preview-loading-text');
+            if(previewContainer) previewContainer.innerHTML = ''; 
+            if(loadingText) loadingText.classList.remove('hidden');
+            
+            window.cachedExportDataURLs = [];
+            
+            try {
+                await document.fonts.ready;
+                const pagesHtml = generateExportPagesHTML();
+                const renderer = document.getElementById('offscreenRenderer');
+                
+                for (let i = 0; i < pagesHtml.length; i++) {
+                    if (window.currentExportGenId !== myGenId) return; 
+                    renderer.innerHTML = pagesHtml[i];
+                    const wrap = renderer.querySelector(`[id^="capture-layout-wrapper"]`);
+                    void wrap.offsetWidth; 
+                    await new Promise(r => setTimeout(r, 500)); 
+                    if (window.currentExportGenId !== myGenId) return;
+                    
+                    const dataUrl = await htmlToImage.toPng(wrap, { quality: 0.85, pixelRatio: 1.5, cacheBust: true, useCORS: true, backgroundColor: '#ffffff' });
+                    if (window.currentExportGenId !== myGenId) return; 
+                    window.cachedExportDataURLs.push(dataUrl);
+                    
+                    const img = document.createElement('img');
+                    img.src = dataUrl;
+                    img.className = "max-w-full h-auto rounded-xl shadow-lg border border-slate-200 fade-in";
+                    document.getElementById('preview-images-container')?.appendChild(img);
+                }
+            } catch (e) { 
+                if (window.currentExportGenId === myGenId) console.error(e);
+            } finally { 
+                if (window.currentExportGenId === myGenId && loadingText) loadingText.classList.add('hidden');
+            }
+        };
+
+        window.closeExportPreview = () => {
+            window.currentExportGenId++; 
+            window.state.showPreviewModal = false;
+            window.updatePreviewModalUI();
+        };
+
+        window.downloadFromPreview = (type) => {
+            if (!window.cachedExportDataURLs.length) return;
+            const baseName = `PostReport_${new Date().toISOString().split('T')[0]}`;
+            
+            if (type === 'image') {
+                window.cachedExportDataURLs.forEach((url, idx) => {
+                    const a = document.createElement('a'); a.download = `${baseName}_Page${idx+1}.png`; a.href = url; a.click();
+                });
+            } else {
+                const { jsPDF } = window.jspdf;
+                const isL = window.state.exportOrientation === 'landscape';
+                const size = isL ? [1123, 794] : [794, 1123];
+                const pdf = new jsPDF({ orientation: isL?'l':'p', unit: 'px', format: size, compress: true });
+                
+                window.cachedExportDataURLs.forEach((url, idx) => {
+                    if (idx > 0) pdf.addPage(size, isL?'l':'p');
+                    pdf.addImage(url, 'PNG', 0, 0, size[0], size[1], undefined, 'FAST');
+                });
+                pdf.save(`${baseName}.pdf`);
+            }
+        };
+
+        window.uiAlert = (message, type = 'info') => {
+            window.state.modal = { show: true, title: type === 'error' ? 'ข้อผิดพลาด' : type === 'success' ? 'สำเร็จ' : 'แจ้งเตือน', message, type, onConfirm: null };
+            window.updateModalUI();
+        };
+        
+        window.uiConfirm = (message, onConfirmCallback) => {
+            window.state.modal = { show: true, title: 'ยืนยัน', message, type: 'confirm', onConfirm: onConfirmCallback };
+            window.updateModalUI();
+        };
+
+        window.closeModal = () => { 
+            window.state.modal.show = false; 
+            window.updateModalUI(); 
+        };
+
+        window.updateModalUI = () => {
+            const container = document.getElementById('modal-container');
+            if (container) {
+                container.innerHTML = renderUIModal();
+                lucide.createIcons();
+            }
+        };
+
+        function renderUIModal() {
+            if (!window.state.modal.show) return "";
+            const isConfirm = window.state.modal.type === 'confirm';
+            let iconClass = 'bg-indigo-50 text-indigo-600', iconName = 'info';
+            if (window.state.modal.type === 'error') { iconClass = 'bg-red-50 text-red-500'; iconName = 'alert-octagon'; } 
+            else if (window.state.modal.type === 'success') { iconClass = 'bg-green-50 text-green-500'; iconName = 'check-circle'; }
+            else if (isConfirm) { iconClass = 'bg-amber-50 text-amber-500'; iconName = 'help-circle'; }
+
+            return `
+                <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 page-transition">
+                    <div class="bg-white rounded-[2rem] p-5 max-w-[300px] w-full text-center shadow-2xl">
+                        <div class="w-10 h-10 ${iconClass} rounded-2xl flex items-center justify-center mx-auto mb-3"><i data-lucide="${iconName}" size="20"></i></div>
+                        <h3 class="text-sm font-black text-slate-800 mb-2">${window.state.modal.title}</h3>
+                        <p class="text-[11px] text-slate-500 font-medium mb-4 whitespace-pre-line">${window.state.modal.message}</p>
+                        ${isConfirm ? `
+                            <div class="flex gap-2">
+                                <button onclick="window.closeModal()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs">ยกเลิก</button>
+                                <button onclick="window.state.modal.onConfirm(); window.closeModal();" class="flex-1 py-2.5 bg-indigo-600 text-white font-bold rounded-xl text-xs">ยืนยัน</button>
+                            </div>
+                        ` : `<button onclick="window.closeModal()" class="w-full py-2.5 bg-slate-900 text-white font-bold rounded-xl text-xs">ตกลง</button>`}
+                    </div>
+                </div>
+            `;
+        }
+
+        window.updatePreviewModalUI = () => {
+            const container = document.getElementById('preview-modal-container');
+            if (container) {
+                container.innerHTML = renderPreviewModal();
+                lucide.createIcons();
+            }
+        };
+
+        function renderPreviewModal() {
+            if (!window.state.showPreviewModal) return "";
+            const orientation = window.state.exportOrientation || 'portrait';
+
+            return `
+                <div class="fixed inset-0 z-[120] flex items-center justify-center p-3 bg-slate-900/80 backdrop-blur-sm page-transition">
+                    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col overflow-hidden">
+                        <div class="flex justify-between items-center p-3 sm:px-4 border-b border-slate-100 shrink-0">
+                            <h3 class="text-xs font-black text-slate-800 flex items-center gap-1.5"><i data-lucide="eye" class="text-indigo-500" size="14"></i> พรีวิวข้อมูลส่งออก</h3>
+                            <button onclick="window.closeExportPreview()" class="p-1.5 text-slate-400 hover:bg-slate-100 rounded-full"><i data-lucide="x" size="14"></i></button>
+                        </div>
+                        <div class="flex-1 overflow-auto bg-[#e2e8f0] p-3 flex flex-col items-center relative min-h-[400px]">
+                            <div id="preview-loading-text" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 z-10 bg-slate-100/50 backdrop-blur-[2px]">
+                                <div class="w-8 h-8 border-4 border-slate-300 border-t-indigo-600 rounded-full animate-spin mb-2"></div>
+                                <span class="font-bold text-[9px] tracking-widest uppercase">กำลังประมวลผล...</span>
+                            </div>
+                            <div id="preview-images-container" class="flex flex-col gap-4 w-full items-center py-2"></div>
+                        </div>
+                        <div class="p-3 sm:px-4 border-t border-slate-100 bg-white flex justify-end gap-2 shrink-0">
+                            <button onclick="window.downloadFromPreview('image')" class="px-3 py-2 bg-indigo-600 text-white rounded-lg text-[10px] font-black"><i data-lucide="image" size="12" class="inline mr-1"></i> เซฟรูปภาพ</button>
+                            <button onclick="window.downloadFromPreview('pdf')" class="px-3 py-2 bg-rose-600 text-white rounded-lg text-[10px] font-black"><i data-lucide="file-pdf" size="12" class="inline mr-1"></i> เซฟ PDF</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
 
         function render() {
-            const root = document.getElementById('app');
-            if (window.state.view === 'login') root.innerHTML = renderLogin();
-            else if (window.state.view === 'student') root.innerHTML = renderStudentView();
-            else if (window.state.view === 'admin') root.innerHTML = renderAdminView();
+            const app = document.getElementById('app');
+            if (window.state.isLoading) return;
+
+            let scrollPos = 0;
+            const scrollEl = document.querySelector('.scrollable-content');
+            if (scrollEl) scrollPos = scrollEl.scrollTop;
+
+            let mainContent = '';
+            if (window.state.view === 'login') {
+                mainContent = renderLogin();
+            } else if (window.state.view === 'user') {
+                mainContent = renderUserView();
+            } else if (window.state.view === 'admin') {
+                mainContent = renderAdminView();
+            }
+
+            app.innerHTML = mainContent;
+
+            const newScrollEl = document.querySelector('.scrollable-content');
+            if (newScrollEl) newScrollEl.scrollTop = scrollPos;
+
+            window.updateModalUI();
+            window.updateItemModalUI();
+            window.updateUserManageModalUI();
+            window.updatePreviewModalUI();
             lucide.createIcons();
         }
 
-        // Initialized Data
-        onAuthStateChanged(auth, (u) => {
-            if (u) {
-                onSnapshot(doc(db, 'artifacts', appId, 'data', 'status'), (s) => {
-                    if (s.exists()) window.state.confirmations = s.data();
-                    fetchSheetData();
-                });
-            } else { signInAnonymously(auth); }
-        });
+        init();
+
     </script>
 </body>
 </html>
