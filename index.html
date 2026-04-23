@@ -172,7 +172,7 @@
             searchQuery: '',
             searchResultKeys: [], 
             searchTargetSeq: '', 
-            filterExtra: '', // เก็บค่า Filter 1.3/2.3
+            filterExtra: '', 
             copiedItems: {}, 
             activeModalItem: null,
             adminTab: 'overview', 
@@ -189,6 +189,7 @@
 
         window.cachedExportDataURLs = []; 
         window.currentExportGenId = 0;
+        window.itemModalInterval = null; // ตัวแปรสำหรับจับเวลา Countdown
 
         function parseCSV(str) {
             const arr = [];
@@ -463,6 +464,7 @@
             window.state.currentUser = { passcode: '', role: 'user_b', access: 'both', name: '' };
             window.state.sessionLoginTime = null;
             window.state.activeModalItem = null;
+            if (window.itemModalInterval) clearInterval(window.itemModalInterval);
             render();
         };
 
@@ -551,6 +553,10 @@
         };
 
         window.closeItemModal = () => {
+            if (window.itemModalInterval) {
+                clearInterval(window.itemModalInterval);
+                window.itemModalInterval = null;
+            }
             window.state.activeModalItem = null;
             window.updateItemModalUI();
         };
@@ -564,24 +570,11 @@
             try {
                 document.execCommand("copy");
                 const key = `${type.toUpperCase()}_${seq}`;
-                window.state.copiedItems[key] = true;
+                // บันทึกเวลาที่กดคัดลอก (หน่วยเป็น timestamp)
+                window.state.copiedItems[key] = Date.now();
                 
+                window.uiAlert("คัดลอกข้อมูลสำเร็จ!\nกรุณากดยืนยันการโพสต์ภายใน 90 นาที", "success");
                 window.updateItemModalUI();
-                
-                const copyBtn = document.getElementById('copy-btn');
-                if(copyBtn) {
-                    const originalHtml = copyBtn.innerHTML;
-                    copyBtn.innerHTML = '<i data-lucide="check" size="14"></i> คัดลอกสำเร็จ';
-                    copyBtn.classList.replace('bg-indigo-600', 'bg-emerald-500');
-                    lucide.createIcons();
-                    setTimeout(() => {
-                        if(document.getElementById('copy-btn')) {
-                            copyBtn.innerHTML = originalHtml;
-                            copyBtn.classList.replace('bg-emerald-500', 'bg-indigo-600');
-                            lucide.createIcons();
-                        }
-                    }, 2000);
-                }
             } catch (err) {
                 window.uiAlert("ไม่สามารถคัดลอกข้อความได้", "error");
             }
@@ -592,8 +585,12 @@
             if (!window.state.user) return;
             const key = `${type.toUpperCase()}_${seq}`;
             
-            if (!window.state.copiedItems[key] && window.state.currentUser.role !== 'admin') {
-                return window.uiAlert("กรุณากด 'คัดลอกข้อมูล' ก่อนถึงจะยืนยันได้", "error");
+            // เช็คเวลาหมดอายุการคัดลอกก่อนบันทึก
+            const copyTime = window.state.copiedItems[key];
+            const isCopied = copyTime && (Date.now() - copyTime < 90 * 60 * 1000);
+
+            if (!isCopied && window.state.currentUser.role !== 'admin') {
+                return window.uiAlert("กรุณากด 'คัดลอกข้อมูล' ก่อนถึงจะยืนยันได้\n(หรือเวลาทำการคัดลอกของคุณหมดอายุแล้ว)", "error");
             }
 
             try {
@@ -603,6 +600,9 @@
                     timestamp: Date.now() 
                 };
                 const newStatus = { [key]: updateData };
+                
+                // เคลียร์ค่าคัดลอกและ timer
+                delete window.state.copiedItems[key];
                 
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'post_status'), newStatus, { merge: true });
                 await logAction('CHECK', `เช็คลิสต์โพสต์ ${type.toUpperCase()} ลำดับ ${seq}`);
@@ -622,6 +622,8 @@
             const key = `${type.toUpperCase()}_${seq}`;
             try {
                 const newStatus = { [key]: null };
+                delete window.state.copiedItems[key]; // บังคับให้ต้องคัดลอกใหม่หากจะยืนยันอีกครั้ง
+
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'post_status'), newStatus, { merge: true });
                 await logAction('UNCHECK', `ยกเลิกเช็คลิสต์โพสต์ ${type.toUpperCase()} ลำดับ ${seq}`);
                 window.closeItemModal();
@@ -790,7 +792,6 @@
             
             const dataList = window.state.currentTab === 'ig' ? window.state.igData : window.state.fbData;
             
-            // ระบบจัดเรียงตัวกรองตามที่กำหนด
             const customOrder = [
                 "Urban architecture",
                 "Social and community",
@@ -808,14 +809,9 @@
             uniqueExtras.sort((a, b) => {
                 let idxA = customOrder.findIndex(o => a.includes(o));
                 let idxB = customOrder.findIndex(o => b.includes(o));
-                
-                // ถ้าทั้งคู่อยู่ในรายการที่กำหนด ให้เรียงตามลำดับในรายการ
                 if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-                // ถ้า A อยู่ในรายการ ให้ A ขึ้นก่อน
                 if (idxA !== -1) return -1;
-                // ถ้า B อยู่ในรายการ ให้ B ขึ้นก่อน
                 if (idxB !== -1) return 1;
-                // ถ้าไม่อยู่ในรายการทั้งคู่ ให้เรียงตามตัวอักษรปกติ
                 return a.localeCompare(b, 'th');
             });
             
@@ -992,6 +988,11 @@
             const container = document.getElementById('item-modal-container');
             const item = window.state.activeModalItem;
             
+            if (window.itemModalInterval) {
+                clearInterval(window.itemModalInterval);
+                window.itemModalInterval = null;
+            }
+
             if (!item) {
                 if(container) container.innerHTML = '';
                 return;
@@ -1004,12 +1005,48 @@
             
             const confInfo = window.state.confirmations[key];
             const isPosted = confInfo && confInfo.status;
-            const isCopied = window.state.copiedItems[key] === true;
+            
+            // เช็คว่าคัดลอกข้อมูลไปหรือยัง และยังไม่หมดเวลา 90 นาที (90 * 60 * 1000 ms)
+            const copyTime = window.state.copiedItems[key];
+            const isCopied = copyTime && (Date.now() - copyTime < 90 * 60 * 1000);
             
             const userRole = window.state.currentUser.role;
             const canCancel = userRole === 'admin' || userRole === 'user_a';
 
             const safeData = item.data.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+
+            let actionBtnHtml = '';
+            if (isPosted) {
+                if (canCancel) {
+                    actionBtnHtml = `
+                        <button onclick="window.unmarkPosted('${item.type}', '${item.seq}')" class="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-colors">
+                            <i data-lucide="check-square" size="14"></i> ยืนยันแล้ว (กดยกเลิก)
+                        </button>
+                    `;
+                } else {
+                    actionBtnHtml = `
+                        <button class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-emerald-600 border border-slate-200 rounded-lg text-xs font-bold cursor-not-allowed opacity-80">
+                            <i data-lucide="check-square" size="14"></i> ยืนยันแล้ว (ล็อค)
+                        </button>
+                    `;
+                }
+            } else {
+                if (isCopied) {
+                    actionBtnHtml = `
+                        <button id="confirm-btn-${key}" onclick="window.markPosted('${item.type}', '${item.seq}')" class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all bg-slate-900 text-white hover:bg-black shadow-md flex-1">
+                            <i data-lucide="square" size="14"></i> 
+                            <span>คลิกเพื่อยืนยันว่าโพสต์แล้ว</span> <span id="timer-${key}" class="text-amber-400 font-mono tracking-wider ml-1"></span>
+                        </button>
+                    `;
+                } else {
+                    actionBtnHtml = `
+                        <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all bg-slate-100 text-slate-400 cursor-not-allowed flex-1">
+                            <i data-lucide="lock" size="14"></i> 
+                            คัดลอกก่อนกดยืนยัน
+                        </button>
+                    `;
+                }
+            }
 
             container.innerHTML = `
                 <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-3 page-transition">
@@ -1054,23 +1091,8 @@
                             </button>
                             
                             <div class="pt-3 border-t border-slate-100 flex items-center gap-3">
-                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex-1">เช็คลิสต์การโพสต์</div>
-                                ${isPosted ? `
-                                    ${canCancel ? `
-                                        <button onclick="window.unmarkPosted('${item.type}', '${item.seq}')" class="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-colors">
-                                            <i data-lucide="check-square" size="14"></i> ยืนยันแล้ว (กดยกเลิก)
-                                        </button>
-                                    ` : `
-                                        <button class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-emerald-600 border border-slate-200 rounded-lg text-xs font-bold cursor-not-allowed opacity-80">
-                                            <i data-lucide="check-square" size="14"></i> ยืนยันแล้ว (ล็อค)
-                                        </button>
-                                    `}
-                                ` : `
-                                    <button onclick="window.markPosted('${item.type}', '${item.seq}')" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${(isCopied || canCancel) ? 'bg-slate-900 text-white hover:bg-black shadow-md' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}">
-                                        <i data-lucide="${(isCopied || canCancel) ? 'square' : 'lock'}" size="14"></i> 
-                                        ${(isCopied || canCancel) ? 'คลิกเพื่อยืนยันว่าโพสต์แล้ว' : 'คัดลอกก่อนกดยืนยัน'}
-                                    </button>
-                                `}
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">เช็คลิสต์</div>
+                                ${actionBtnHtml}
                             </div>
                         </div>
                         
@@ -1078,6 +1100,31 @@
                 </div>
             `;
             lucide.createIcons();
+
+            // เริ่มทำงานนับเวลาถอยหลัง (Interval)
+            if (isCopied && !isPosted) {
+                const updateTimer = () => {
+                    const cTime = window.state.copiedItems[key];
+                    if (!cTime) return;
+                    const diff = (cTime + 90 * 60 * 1000) - Date.now();
+                    
+                    if (diff <= 0) {
+                        clearInterval(window.itemModalInterval);
+                        delete window.state.copiedItems[key]; // เคลียร์สถานะการคัดลอกเมื่อหมดเวลา
+                        window.updateItemModalUI(); // รีเรนเดอร์เพื่อล็อคปุ่ม
+                    } else {
+                        const timerEl = document.getElementById(`timer-${key}`);
+                        if (timerEl) {
+                            const m = Math.floor(diff / 60000).toString().padStart(2, '0');
+                            const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+                            timerEl.innerText = `(${m}:${s})`;
+                        }
+                    }
+                };
+                
+                updateTimer(); // เรียกอัปเดตครั้งแรกเพื่อไม่ต้องรอ 1 วินาที
+                window.itemModalInterval = setInterval(updateTimer, 1000);
+            }
         };
 
         function renderAdminView() {
